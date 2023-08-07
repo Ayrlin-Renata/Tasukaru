@@ -15,13 +15,13 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
-    maven { url = uri("https://jitpack.io") }
+    maven(url = "https://jitpack.io")
 }
 
 dependencies {
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.0.1-jre")
-    implementation("co.casterlabs.Casterlabs:PluginSDK:8383849e")
+    compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849")
 }
 
 testing {
