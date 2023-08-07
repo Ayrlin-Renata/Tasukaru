@@ -38,3 +38,10 @@ application {
     // Define the main class for the application.
     mainClass.set("com.ayrlin.tasukaru.App")
 }
+
+// Java 11 Adopt...io... or something
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(11))
+    }
+}

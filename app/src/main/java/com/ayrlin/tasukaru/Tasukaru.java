@@ -4,28 +4,38 @@
 package com.ayrlin.tasukaru;
 
 import co.casterlabs.caffeinated.pluginsdk.*;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @CaffeinatedPluginImplementation
 public class Tasukaru extends CaffeinatedPlugin {
 
+    private FastLogger log;
+
+    public Tasukaru() {
+        super();
+        log = this.getLogger();
+    }
+
     @Override
     public void onInit() {
-        this.getLogger().info("Hello World!");
+        log.debug("Tasukaru onInit()");
+        log.info("Hello World!");
     }
 
     @Override
     public void onClose() {
-        this.getLogger().info("Goodbye World!");
+        log.debug("Tasukaru onClose()");
+        log.info("Goodbye World!");
     }
 
     @Override
     public String getName() {
-        return "My First Plugin";
+        return "Tasukaru";
     }
 
     @Override
     public String getId() {
-        return "com.example.firstplugin";
+        return "com.ayrlin.tasukaru";
     }
 
 }
