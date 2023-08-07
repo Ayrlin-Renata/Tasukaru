@@ -29,45 +29,13 @@ public class Tasukaru extends CaffeinatedPlugin {
         log.info("Hello World!");
 
         // file setup
-        String wDir = System.getProperty("user.dir");
-        log.debug("Working Directory reported as: " + wDir);
-        Path wPath = Paths.get(wDir);
-        Path cPath = wPath.getParent();
-        String cDir;
-        try {
-            cDir = cPath.toRealPath().toString();
-        } catch (IOException e) {
-            log.severe("Tasukaru Plugin unable to initialize properly due to inability to: find casterlabs base path.");
-            e.printStackTrace();
-            return;
-        }
-        log.debug("Casterlabs-Caffeinated directory reported as: " + cDir);
-        String pDir = cDir + "/plugins";
-        Path pPath = Paths.get(pDir);
         String tDir;
         try {
-            tDir = pPath.toRealPath().toString() + "/tasukaru";
+            tDir = initPluginDir("tasukaru");
         } catch (IOException e) {
-            log.severe(
-                    "Tasukaru Plugin unable to initialize properly due to inability to: find plugin directory path.");
+            log.severe("Tasukaru unable to initialize plugin directory. Init aborted.");
             e.printStackTrace();
             return;
-        }
-        Path tPath = Paths.get(tDir);
-
-        if (!Files.isDirectory(tPath)) {
-            log.warn("Unable to find tasukaru plugin directory: " + tDir);
-            // create folder
-            log.info("Creating tasukaru plugin directory: " + tDir);
-            try {
-                Files.createDirectories(tPath);
-            } catch (IOException e) {
-                log.severe(
-                        "Tasukaru Plugin unable to initialize properly due to inability to: create tasukaru directory: "
-                                + tDir);
-                e.printStackTrace();
-                return;
-            }
         }
 
         // database init
@@ -83,6 +51,47 @@ public class Tasukaru extends CaffeinatedPlugin {
     public void onClose() {
         log.debug("Tasukaru onClose()");
         log.info("Goodbye World!");
+    }
+
+    private String initPluginDir(String plugin) throws IOException {
+        String wDir = System.getProperty("user.dir");
+        log.debug("Working Directory reported as: " + wDir);
+        Path wPath = Paths.get(wDir);
+        Path cPath = wPath.getParent();
+        String cDir;
+        try {
+            cDir = cPath.toRealPath().toString();
+        } catch (IOException e) {
+            log.severe("Plugin unable to initialize properly due to inability to: find casterlabs base path.");
+            throw e;
+        }
+        log.debug("Casterlabs-Caffeinated directory reported as: " + cDir);
+        String pDir = cDir + "/plugins";
+        Path pPath = Paths.get(pDir);
+        String tDir;
+        try {
+            tDir = pPath.toRealPath().toString() + "/" + plugin;
+        } catch (IOException e) {
+            log.severe(
+                    "Plugin unable to initialize properly due to inability to: find plugin directory path.");
+            throw e;
+        }
+        Path tPath = Paths.get(tDir);
+
+        if (!Files.isDirectory(tPath)) {
+            log.warn("Unable to find " + plugin + " plugin directory: " + tDir);
+            // create folder
+            log.info("Creating " + plugin + " plugin directory: " + tDir);
+            try {
+                Files.createDirectories(tPath);
+            } catch (IOException e) {
+                log.severe(
+                        "Plugin unable to initialize properly due to inability to: create " + plugin + " directory: "
+                                + tDir);
+                throw e;
+            }
+        }
+        return tDir;
     }
 
     @Override
