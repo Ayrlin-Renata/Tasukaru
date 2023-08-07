@@ -22,7 +22,7 @@ dependencies {
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.0.1-jre")
 
-    compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849")
+    compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849e")
     implementation("org.xerial:sqlite-jdbc:3.42.0.0")
 }
 

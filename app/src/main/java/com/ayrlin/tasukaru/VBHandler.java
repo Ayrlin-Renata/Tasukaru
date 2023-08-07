@@ -32,27 +32,48 @@ public class VBHandler {
         if (!hasData) {
             hasData = true;
             // check for database table
-            Statement state = con.createStatement();
-            ResultSet res = state.executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='user'");
-            if (!res.next()) {
-                log.info("Building the User table with prepopulated values.");
-                // need to build the table
-                Statement state2 = con.createStatement();
-                state2.executeUpdate("create table user(id integer,"
-                        + "fName varchar(60)," + "lname varchar(60)," + "primary key (id));");
+            ResultSet viewerRes = con.createStatement()
+                    .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='viewers'");
+            if (!viewerRes.next()) {
+                log.info("No Viewer table found, creating new Viewer table.");
+
+                // viewer table definition
+                con.createStatement().executeUpdate("create table viewers("
+                        + "id INTEGER PRIMARY KEY,"
+                        + "username TEXT NOT NULL,"
+                        + "platform TEXT,"
+                        + "watchtime INTEGER," // in seconds, would take ~130 years to go over 32 bit
+                        + "tskrpoints INTEGER"
+                        + ");");
 
                 // inserting some sample data
-                PreparedStatement prep = con.prepareStatement("insert into user values(?,?,?);");
-                prep.setString(2, "first1");
-                prep.setString(3, "last1");
-                prep.execute();
+                // PreparedStatement prep = con.prepareStatement("insert into user
+                // values(?,?,?);");
+                // prep.setString(2, "first1");
+                // prep.setString(3, "last1");
+                // prep.execute();
 
-                PreparedStatement prep2 = con.prepareStatement("insert into user values(?,?,?);");
-                prep2.setString(2, "first2");
-                prep2.setString(3, "last2");
-                prep2.execute();
+                // PreparedStatement prep2 = con.prepareStatement("insert into user
+                // values(?,?,?);");
+                // prep2.setString(2, "first2");
+                // prep2.setString(3, "last2");
+                // prep2.execute();
             }
+            ResultSet historyRes = con.createStatement()
+                    .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='history'");
+            if (!historyRes.next()) {
+                log.info("No History table found, creating new History table.");
 
+                // history table definition
+                con.createStatement().executeUpdate("create table history("
+                        + "id INTEGER PRIMARY KEY,"
+                        + "userid INTEGER NOT NULL," // foreign key viewers
+                        + "uptype TEXT NOT NULL," // viewing, awol, manual
+                        + "action TEXT,"
+                        + "value INTEGER,"
+                        + "FOREIGN KEY(userid) REFERENCES viewers(id)"
+                        + ");");
+            }
         }
     }
 
