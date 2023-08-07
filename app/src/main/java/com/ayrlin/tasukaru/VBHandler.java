@@ -5,24 +5,20 @@ import java.sql.*;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class VBHandler {
-    private FastLogger log;
     private static Connection con;
     private static boolean hasData = false;
 
-    public VBHandler(FastLogger fl) {
+    private FastLogger log;
+    private String tDir;
+
+    public VBHandler(FastLogger fl, String td) {
         log = fl;
+        tDir = td;
     }
 
     public void run() {
-        ResultSet rs;
-
         try {
-            rs = displayUsers();
-
-            while (rs.next()) {
-                log.debug(rs.getString("fname") + " " + rs.getString("lname"));
-            }
-
+            getConnection();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -35,7 +31,7 @@ public class VBHandler {
             ResultSet viewerRes = con.createStatement()
                     .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='viewers'");
             if (!viewerRes.next()) {
-                log.info("No Viewer table found, creating new Viewer table.");
+                log.warn("No Viewer table found, creating new Viewer table.");
 
                 // viewer table definition
                 con.createStatement().executeUpdate("create table viewers("
@@ -62,7 +58,7 @@ public class VBHandler {
             ResultSet historyRes = con.createStatement()
                     .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='history'");
             if (!historyRes.next()) {
-                log.info("No History table found, creating new History table.");
+                log.warn("No History table found, creating new History table.");
 
                 // history table definition
                 con.createStatement().executeUpdate("create table history("
@@ -81,9 +77,15 @@ public class VBHandler {
         // sqlite driver
         Class.forName("org.sqlite.JDBC");
         // database path, if it's new database, it will be created in the project folder
-        con = DriverManager.getConnection("jdbc:sqlite:TasukaruViewerBase.db");
+        // con =
+        // DriverManager.getConnection("jdbc:sqlite:../plugins/Tasukaru/ViewerBase.db");
+        String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
+        log.debug("Attempting to connect to DB at: " + conPath);
+        con = DriverManager.getConnection(conPath);
         initialise();
     }
+
+    ///////////////// VB ACTIONS //////////////////
 
     public ResultSet displayUsers() throws SQLException, ClassNotFoundException {
         if (con == null) {

@@ -3,6 +3,11 @@
  */
 package com.ayrlin.tasukaru;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import co.casterlabs.caffeinated.pluginsdk.*;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -23,11 +28,55 @@ public class Tasukaru extends CaffeinatedPlugin {
         log.debug("Tasukaru onInit()");
         log.info("Hello World!");
 
+        // file setup
+        String wDir = System.getProperty("user.dir");
+        log.debug("Working Directory reported as: " + wDir);
+        Path wPath = Paths.get(wDir);
+        Path cPath = wPath.getParent();
+        String cDir;
+        try {
+            cDir = cPath.toRealPath().toString();
+        } catch (IOException e) {
+            log.severe("Tasukaru Plugin unable to initialize properly due to inability to: find casterlabs base path.");
+            e.printStackTrace();
+            return;
+        }
+        log.debug("Casterlabs-Caffeinated directory reported as: " + cDir);
+        String pDir = cDir + "/plugins";
+        Path pPath = Paths.get(pDir);
+        String tDir;
+        try {
+            tDir = pPath.toRealPath().toString() + "/tasukaru";
+        } catch (IOException e) {
+            log.severe(
+                    "Tasukaru Plugin unable to initialize properly due to inability to: find plugin directory path.");
+            e.printStackTrace();
+            return;
+        }
+        Path tPath = Paths.get(tDir);
+
+        if (!Files.isDirectory(tPath)) {
+            log.warn("Unable to find tasukaru plugin directory: " + tDir);
+            // create folder
+            log.info("Creating tasukaru plugin directory: " + tDir);
+            try {
+                Files.createDirectories(tPath);
+            } catch (IOException e) {
+                log.severe(
+                        "Tasukaru Plugin unable to initialize properly due to inability to: create tasukaru directory: "
+                                + tDir);
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        // database init
+        vb = new VBHandler(log, tDir + "/");
+        vb.run();
+
         // listener init
         tlist = new TListener(log);
         addKoiListener(tlist);
-        vb = new VBHandler(log);
-        vb.run();
     }
 
     @Override
