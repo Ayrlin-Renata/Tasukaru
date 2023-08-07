@@ -10,6 +10,8 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class Tasukaru extends CaffeinatedPlugin {
 
     private FastLogger log;
+    private TListener tlist;
+    private VBHandler vb;
 
     public Tasukaru() {
         super();
@@ -20,6 +22,12 @@ public class Tasukaru extends CaffeinatedPlugin {
     public void onInit() {
         log.debug("Tasukaru onInit()");
         log.info("Hello World!");
+
+        // listener init
+        tlist = new TListener(log);
+        addKoiListener(tlist);
+        vb = new VBHandler(log);
+        vb.run();
     }
 
     @Override

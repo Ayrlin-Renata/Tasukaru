@@ -21,7 +21,9 @@ repositories {
 dependencies {
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.0.1-jre")
+
     compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849")
+    implementation("org.xerial:sqlite-jdbc:3.42.0.0")
 }
 
 testing {
@@ -37,6 +39,13 @@ testing {
 application {
     // Define the main class for the application.
     mainClass.set("com.ayrlin.tasukaru.App")
+}
+
+tasks.register("export", Copy::class) {
+    from("$buildDir/libs/app.jar") // Source file path
+    into("${System.getenv("APPDATA")}/casterlabs-caffeinated/plugins") // Destination directory path (appdata/path)
+
+    rename("app.jar", "tasukaru.jar")
 }
 
 // Java 11 Adopt...io... or something
