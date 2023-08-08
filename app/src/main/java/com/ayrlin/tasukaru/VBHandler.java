@@ -37,23 +37,12 @@ public class VBHandler {
                 con.createStatement().executeUpdate("create table viewers("
                         + "id INTEGER PRIMARY KEY,"
                         + "username TEXT NOT NULL,"
+                        + "displayname TEXT,"
+                        + "platuserid TEXT,"
                         + "platform TEXT,"
                         + "watchtime INTEGER," // in seconds, would take ~130 years to go over 32 bit
                         + "tskrpoints INTEGER"
                         + ");");
-
-                // inserting some sample data
-                // PreparedStatement prep = con.prepareStatement("insert into user
-                // values(?,?,?);");
-                // prep.setString(2, "first1");
-                // prep.setString(3, "last1");
-                // prep.execute();
-
-                // PreparedStatement prep2 = con.prepareStatement("insert into user
-                // values(?,?,?);");
-                // prep2.setString(2, "first2");
-                // prep2.setString(3, "last2");
-                // prep2.execute();
             }
             ResultSet historyRes = con.createStatement()
                     .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='history'");
@@ -96,17 +85,29 @@ public class VBHandler {
 
     ///////////////// VB ACTIONS //////////////////
 
+    // TODO some kind of viewer info object because this is getting out of hand
+
     public void addViewer(String username, String platform) {
         addViewer(username, platform, 0, 0);
     }
 
     public void addViewer(String username, String platform, int watchtime, int tskrpoints) {
+        addViewer(username, "", "", platform, watchtime, tskrpoints);
+    }
+
+    public void addViewer(String username, String displayname, String platuserid, String platform) {
+        addViewer(username, displayname, platuserid, platform, 0, 0);
+    }
+
+    public void addViewer(String username, String displayname, String platuserid, String platform, int watchtime,
+            int tskrpoints) {
         if (con == null) {
             getConnection();
         }
         try {
             PreparedStatement prep = con
-                    .prepareStatement("insert into viewers(username,platform,watchtime,tskrpoints) values(?,?,?,?);");
+                    .prepareStatement(
+                            "insert into viewers(username,displayname,platuserid,platform,watchtime,tskrpoints) values(?,?,?,?);");
             prep.setString(1, username);
             prep.setString(2, platform);
             prep.setInt(3, watchtime);
@@ -163,12 +164,17 @@ public class VBHandler {
             prep.setString(1, username);
             prep.setString(2, platform);
             ResultSet res = prep.executeQuery();
+            if (!res.next()) {
+                log.warn("unable to find user: " + username + " on " + platform);
+                return -1;
+            }
             userId = res.getInt("id");
         } catch (SQLException e) {
-            log.severe("unable to find user: " + username + " on " + platform);
+            log.severe("SQLException while finding user: " + username + " on " + platform);
             e.printStackTrace();
             return -1;
         }
+        log.trace("found userId " + userId + " for player " + username + " on " + platform);
         return userId;
     }
 }

@@ -7,9 +7,11 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class TListener implements KoiEventListener {
 
     private FastLogger log;
+    private VBHandler vb;
 
-    public TListener(FastLogger fl) {
+    public TListener(FastLogger fl, VBHandler vb) {
         log = fl;
+        this.vb = vb;
         log.debug("Tasukaru()");
     }
 
@@ -29,6 +31,8 @@ public class TListener implements KoiEventListener {
     public void onViewerJoin(ViewerJoinEvent e) {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
+
+        // vb.addHistoryAndViewer(e.getViewer().);
     }
 
     @KoiEventHandler

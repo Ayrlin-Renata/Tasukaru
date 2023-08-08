@@ -43,7 +43,7 @@ public class Tasukaru extends CaffeinatedPlugin {
         vb.run();
 
         // listener init
-        tlist = new TListener(log);
+        tlist = new TListener(log, vb);
         addKoiListener(tlist);
     }
 
