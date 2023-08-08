@@ -15,6 +15,7 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class Tasukaru extends CaffeinatedPlugin {
 
     private FastLogger log;
+    private TLogic tlogic;
     private TListener tlist;
     private VBHandler vb;
 
@@ -42,8 +43,11 @@ public class Tasukaru extends CaffeinatedPlugin {
         vb = new VBHandler(log, tDir + "/");
         vb.run();
 
+        // controller init
+        tlogic = new TLogic(log, vb);
+
         // listener init
-        tlist = new TListener(log, vb);
+        tlist = new TListener(log, tlogic);
         addKoiListener(tlist);
     }
 

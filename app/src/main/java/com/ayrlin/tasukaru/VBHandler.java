@@ -119,20 +119,21 @@ public class VBHandler {
         }
     }
 
-    public void addHistory(String username, String platform, String uptype, String action, int value) {
-        int userId = findUserId(username, platform);
-        if (userId < 0) {
-            log.severe("unable to add history for user " + username + "on" + platform
-                    + ": " + uptype + "," + action + "," + value);
-            return;
-        }
-        addHistory(userId, uptype, action, value);
-    }
+    // public void addHistory(String username, String platform, String uptype,
+    // String action, int value) {
+    // int userId = findUserId(username, platform);
+    // if (userId < 0) {
+    // log.severe("unable to add history for user " + username + "on" + platform
+    // + ": " + uptype + "," + action + "," + value);
+    // return;
+    // }
+    // addHistory(userId, uptype, action, value);
+    // }
 
-    public void addHistory(int userid, String uptype, String action, int value) {
-        Timestamp now = new java.sql.Timestamp(new java.util.Date().getTime());
-        addHistory(userid, uptype, action, value, now);
-    }
+    // public void addHistory(int userid, String uptype, String action, int value) {
+    // Timestamp now = new java.sql.Timestamp(new java.util.Date().getTime());
+    // addHistory(userid, uptype, action, value, now);
+    // }
 
     public void addHistory(int userid, String uptype, String action, int value, Timestamp timestamp) {
         if (con == null) {

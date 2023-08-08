@@ -2,16 +2,17 @@ package com.ayrlin.tasukaru;
 
 import co.casterlabs.koi.api.listener.*;
 import co.casterlabs.koi.api.types.events.*;
+import co.casterlabs.koi.api.types.user.User;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TListener implements KoiEventListener {
 
     private FastLogger log;
-    private VBHandler vb;
+    private TLogic tl;
 
-    public TListener(FastLogger fl, VBHandler vb) {
+    public TListener(FastLogger fl, TLogic tl) {
         log = fl;
-        this.vb = vb;
+        this.tl = tl;
         log.debug("Tasukaru()");
     }
 
@@ -31,8 +32,11 @@ public class TListener implements KoiEventListener {
     public void onViewerJoin(ViewerJoinEvent e) {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
-
-        // vb.addHistoryAndViewer(e.getViewer().);
+        User eU = e.getViewer();
+        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
+                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("join");
+        tl.incoming(histEvent);
     }
 
     @KoiEventHandler
