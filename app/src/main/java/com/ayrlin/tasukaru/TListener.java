@@ -16,25 +16,25 @@ public class TListener implements KoiEventListener {
     @KoiEventHandler
     public void onViewerCount(ViewerCountEvent e) {
         log.debug("Tasukaru recieved ViewerCountEvent.");
-
+        log.trace(e);
     }
 
     @KoiEventHandler
     public void onViewerList(ViewerListEvent e) {
         log.debug("Tasukaru recieved ViewerListEvent.");
-
+        log.trace(e);
     }
 
     @KoiEventHandler
     public void onViewerJoin(ViewerJoinEvent e) {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
-
+        log.trace(e);
     }
 
     @KoiEventHandler
     public void onViewerLeave(ViewerLeaveEvent e) {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
-
+        log.trace(e);
     }
 
     // @KoiEventHandler

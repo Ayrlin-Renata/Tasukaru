@@ -67,46 +67,108 @@ public class VBHandler {
                         + "uptype TEXT NOT NULL," // viewing, awol, manual
                         + "action TEXT,"
                         + "value INTEGER,"
+                        + "timestamp TEXT,"
                         + "FOREIGN KEY(userid) REFERENCES viewers(id)"
                         + ");");
             }
         }
     }
 
-    private void getConnection() throws ClassNotFoundException, SQLException {
+    private void getConnection() {
         // sqlite driver
-        Class.forName("org.sqlite.JDBC");
-        // database path, if it's new database, it will be created in the project folder
-        // con =
-        // DriverManager.getConnection("jdbc:sqlite:../plugins/Tasukaru/ViewerBase.db");
-        String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
-        log.debug("Attempting to connect to DB at: " + conPath);
-        con = DriverManager.getConnection(conPath);
-        initialise();
+        try {
+            Class.forName("org.sqlite.JDBC");
+            // database path, if it's new database, it will be created in the project folder
+            // con =
+            // DriverManager.getConnection("jdbc:sqlite:../plugins/Tasukaru/ViewerBase.db");
+            String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
+            log.debug("Attempting to connect to DB at: " + conPath);
+            con = DriverManager.getConnection(conPath);
+            initialise();
+        } catch (ClassNotFoundException e) {
+            log.severe("couldnt find JDBC");
+            e.printStackTrace();
+        } catch (SQLException e) {
+            log.severe("couldnt connect to the viewerbase DB");
+            e.printStackTrace();
+        }
     }
 
     ///////////////// VB ACTIONS //////////////////
 
-    public ResultSet displayUsers() throws SQLException, ClassNotFoundException {
-        if (con == null) {
-            // get connection
-            getConnection();
-        }
-        Statement state = con.createStatement();
-        ResultSet res = state.executeQuery("select fname, lname from user");
-        return res;
+    public void addViewer(String username, String platform) {
+        addViewer(username, platform, 0, 0);
     }
 
-    public void addUser(String firstname, String lastname) throws ClassNotFoundException, SQLException {
+    public void addViewer(String username, String platform, int watchtime, int tskrpoints) {
         if (con == null) {
-            // get connection
             getConnection();
         }
-        PreparedStatement prep = con
-                .prepareStatement("insert into user values(?,?,?);");
-        prep.setString(2, firstname);
-        prep.setString(3, lastname);
-        prep.execute();
+        try {
+            PreparedStatement prep = con
+                    .prepareStatement("insert into viewers(username,platform,watchtime,tskrpoints) values(?,?,?,?);");
+            prep.setString(1, username);
+            prep.setString(2, platform);
+            prep.setInt(3, watchtime);
+            prep.setInt(4, tskrpoints);
+            prep.execute();
+        } catch (SQLException e) {
+            log.severe("failed to execute addViewer() SQL.");
+            e.printStackTrace();
+        }
+    }
 
+    public void addHistory(String username, String platform, String uptype, String action, int value) {
+        int userId = findUserId(username, platform);
+        if (userId < 0) {
+            log.severe("unable to add history for user " + username + "on" + platform
+                    + ": " + uptype + "," + action + "," + value);
+            return;
+        }
+        addHistory(userId, uptype, action, value);
+    }
+
+    public void addHistory(int userid, String uptype, String action, int value) {
+        Timestamp now = new java.sql.Timestamp(new java.util.Date().getTime());
+        addHistory(userid, uptype, action, value, now);
+    }
+
+    public void addHistory(int userid, String uptype, String action, int value, Timestamp timestamp) {
+        if (con == null) {
+            getConnection();
+        }
+        try {
+            PreparedStatement prep = con
+                    .prepareStatement("insert into history(userid,uptype,action,value,timestamp) values(?,?,?,?,?);");
+            prep.setInt(1, userid);
+            prep.setString(2, uptype);
+            prep.setString(3, action);
+            prep.setInt(4, value);
+            prep.setTimestamp(5, timestamp);
+            prep.execute();
+        } catch (SQLException e) {
+            log.severe("failed to execute addHistory() SQL.");
+            e.printStackTrace();
+        }
+    }
+
+    public int findUserId(String username, String platform) {
+        if (con == null) {
+            getConnection();
+        }
+        int userId;
+        try {
+            PreparedStatement prep = con
+                    .prepareStatement("select id from viewers where username == ? and platform == ?");
+            prep.setString(1, username);
+            prep.setString(2, platform);
+            ResultSet res = prep.executeQuery();
+            userId = res.getInt("id");
+        } catch (SQLException e) {
+            log.severe("unable to find user: " + username + " on " + platform);
+            e.printStackTrace();
+            return -1;
+        }
+        return userId;
     }
 }
