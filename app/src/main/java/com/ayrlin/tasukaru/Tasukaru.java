@@ -54,6 +54,8 @@ public class Tasukaru extends CaffeinatedPlugin {
     @Override
     public void onClose() {
         log.debug("Tasukaru onClose()");
+
+        // TODO implement backups
         log.info("Goodbye World!");
     }
 

@@ -34,7 +34,7 @@ public class VBHandler {
                 log.warn("No Viewer table found, creating new Viewer table.");
 
                 // viewer table definition
-                con.createStatement().executeUpdate("create table viewers("
+                con.createStatement().executeUpdate("create table viewers(" // TODO implement UPID
                         + "id INTEGER PRIMARY KEY,"
                         + "username TEXT NOT NULL,"
                         + "displayname TEXT,"

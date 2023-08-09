@@ -26,6 +26,7 @@ public class TListener implements KoiEventListener {
     public void onViewerList(ViewerListEvent e) {
         log.debug("Tasukaru recieved ViewerListEvent.");
         log.trace(e);
+
     }
 
     @KoiEventHandler
@@ -43,6 +44,30 @@ public class TListener implements KoiEventListener {
     public void onViewerLeave(ViewerLeaveEvent e) {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
         log.trace(e);
+        User eU = e.getViewer();
+        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
+                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("absent").action("leave");
+        tl.incoming(histEvent);
+    }
+
+    // for messages and also donations
+    @KoiEventHandler
+    public void onRichMessage(RichMessageEvent e) {
+        log.debug("Tasukaru recieved RichMessageEvent.");
+        log.trace(e);
+
+        User eU = e.getSender();
+        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
+                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present");
+        if (e.getDonations().isEmpty()) {
+            histEvent = histEvent.action("message");
+        } else {
+            histEvent = histEvent.action("donation");
+            // TODO .value(TUtil.usdValue(e.getDonations()));
+        }
+        tl.incoming(histEvent);
     }
 
     // @KoiEventHandler
