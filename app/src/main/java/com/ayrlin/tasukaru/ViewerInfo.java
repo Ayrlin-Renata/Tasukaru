@@ -1,5 +1,7 @@
 package com.ayrlin.tasukaru;
 
+import co.casterlabs.koi.api.types.user.User;
+
 public class ViewerInfo {
     public int userId;
     public String username;
@@ -12,6 +14,14 @@ public class ViewerInfo {
 
     public ViewerInfo() {
 
+    }
+
+    public ViewerInfo(User user) {
+        this.username(user.getUsername())
+                .displayname(user.getDisplayname())
+                .platuserid(user.getId())
+                .upid(user.getUPID())
+                .platform(user.getPlatform().getStr());
     }
 
     public ViewerInfo userId(int userId) {
@@ -53,4 +63,5 @@ public class ViewerInfo {
         this.tskrpoints = tskrpoints;
         return this;
     }
+
 }

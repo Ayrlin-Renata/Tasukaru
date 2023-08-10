@@ -34,8 +34,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
         User eU = e.getViewer();
-        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
-                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        ViewerInfo tskrViewerData = new ViewerInfo(eU);
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("join");
         tl.incoming(histEvent);
     }
@@ -45,8 +44,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
         log.trace(e);
         User eU = e.getViewer();
-        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
-                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        ViewerInfo tskrViewerData = new ViewerInfo(eU);
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("absent").action("leave");
         tl.incoming(histEvent);
     }
@@ -64,8 +62,7 @@ public class TListener implements KoiEventListener {
         log.trace(e);
 
         User eU = e.getSender();
-        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
-                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        ViewerInfo tskrViewerData = new ViewerInfo(eU);
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present");
         if (e.getDonations().isEmpty()) {
             histEvent = histEvent.action("message");
@@ -82,8 +79,7 @@ public class TListener implements KoiEventListener {
         log.trace(e);
 
         User eU = e.getFollower();
-        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
-                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        ViewerInfo tskrViewerData = new ViewerInfo(eU);
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("follow");
         tl.incoming(histEvent);
     }
@@ -94,8 +90,7 @@ public class TListener implements KoiEventListener {
         log.trace(e);
 
         User eU = e.getSubscriber();
-        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
-                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        ViewerInfo tskrViewerData = new ViewerInfo(eU);
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("subscribe");
         tl.incoming(histEvent);
     }
