@@ -2,7 +2,6 @@ package com.ayrlin.tasukaru;
 
 import co.casterlabs.koi.api.listener.*;
 import co.casterlabs.koi.api.types.events.*;
-import co.casterlabs.koi.api.types.user.User;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TListener implements KoiEventListener {
@@ -33,8 +32,7 @@ public class TListener implements KoiEventListener {
     public void onViewerJoin(ViewerJoinEvent e) {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
-        User eU = e.getViewer();
-        ViewerInfo tskrViewerData = new ViewerInfo(eU);
+        ViewerInfo tskrViewerData = new ViewerInfo(e.getViewer());
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("join");
         tl.incoming(histEvent);
     }
@@ -43,8 +41,7 @@ public class TListener implements KoiEventListener {
     public void onViewerLeave(ViewerLeaveEvent e) {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
         log.trace(e);
-        User eU = e.getViewer();
-        ViewerInfo tskrViewerData = new ViewerInfo(eU);
+        ViewerInfo tskrViewerData = new ViewerInfo(e.getViewer());
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("absent").action("leave");
         tl.incoming(histEvent);
     }
@@ -61,8 +58,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved RichMessageEvent.");
         log.trace(e);
 
-        User eU = e.getSender();
-        ViewerInfo tskrViewerData = new ViewerInfo(eU);
+        ViewerInfo tskrViewerData = new ViewerInfo(e.getSender());
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present");
         if (e.getDonations().isEmpty()) {
             histEvent = histEvent.action("message");
@@ -78,8 +74,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved FollowEvent.");
         log.trace(e);
 
-        User eU = e.getFollower();
-        ViewerInfo tskrViewerData = new ViewerInfo(eU);
+        ViewerInfo tskrViewerData = new ViewerInfo(e.getFollower());
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("follow");
         tl.incoming(histEvent);
     }
@@ -89,8 +84,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved SubscriptionEvent.");
         log.trace(e);
 
-        User eU = e.getSubscriber();
-        ViewerInfo tskrViewerData = new ViewerInfo(eU);
+        ViewerInfo tskrViewerData = new ViewerInfo(e.getSubscriber());
         EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("subscribe");
         tl.incoming(histEvent);
     }
