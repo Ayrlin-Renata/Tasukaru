@@ -51,6 +51,12 @@ public class TListener implements KoiEventListener {
         tl.incoming(histEvent);
     }
 
+    @KoiEventHandler
+    public void onStreamStatus(StreamStatusEvent e) {
+        log.debug("Tasukaru recieved StreamStatusEvent.");
+        log.trace(e);
+    }
+
     // for messages and also donations
     @KoiEventHandler
     public void onRichMessage(RichMessageEvent e) {
@@ -64,29 +70,47 @@ public class TListener implements KoiEventListener {
         if (e.getDonations().isEmpty()) {
             histEvent = histEvent.action("message");
         } else {
-            histEvent = histEvent.action("donation");
+            histEvent = histEvent.action("donate");
             // TODO .value(TUtil.usdValue(e.getDonations()));
         }
         tl.incoming(histEvent);
     }
 
-    // @KoiEventHandler
-    // public void onChannelPoints(ChannelPointsEvent e) {
-    // log.debug("Tasukaru recieved ChannelPointsEvent.");
+    @KoiEventHandler
+    public void onFollow(FollowEvent e) {
+        log.debug("Tasukaru recieved FollowEvent.");
+        log.trace(e);
 
-    // }
+        User eU = e.getFollower();
+        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
+                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("follow");
+        tl.incoming(histEvent);
+    }
+
+    @KoiEventHandler
+    public void onSubscription(SubscriptionEvent e) {
+        log.debug("Tasukaru recieved SubscriptionEvent.");
+        log.trace(e);
+
+        User eU = e.getSubscriber();
+        ViewerInfo tskrViewerData = new ViewerInfo().username(eU.getUsername()).displayname(eU.getDisplayname())
+                .platuserid(eU.getId()).upid(eU.getUPID()).platform(eU.getPlatform().getStr());
+        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("subscribe");
+        tl.incoming(histEvent);
+    }
+
+    @KoiEventHandler
+    public void onChannelPoints(ChannelPointsEvent e) {
+        log.debug("Tasukaru recieved ChannelPointsEvent.");
+        log.trace(e);
+    }
 
     // // "clear chat happens when you clear the chat OR when a user gets banned and
     // // their messages get pruned"
     // @KoiEventHandler
     // public void onClearChat(ClearChatEvent e) {
     // log.debug("Tasukaru recieved ClearChatEvent.");
-
-    // }
-
-    // @KoiEventHandler
-    // public void onFollow(FollowEvent e) {
-    // log.debug("Tasukaru recieved FollowEvent.");
 
     // }
 
@@ -134,18 +158,6 @@ public class TListener implements KoiEventListener {
     // @KoiEventHandler
     // public void onRoomstate(RoomstateEvent e) {
     // log.debug("Tasukaru recieved RoomstateEvent.");
-
-    // }
-
-    // @KoiEventHandler
-    // public void onStreamStatus(StreamStatusEvent e) {
-    // log.debug("Tasukaru recieved StreamStatusEvent.");
-
-    // }
-
-    // @KoiEventHandler
-    // public void onSubscription(SubscriptionEvent e) {
-    // log.debug("Tasukaru recieved SubscriptionEvent.");
 
     // }
 

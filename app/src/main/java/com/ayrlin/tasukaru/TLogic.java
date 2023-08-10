@@ -11,8 +11,10 @@ public class TLogic {
         this.vb = vb;
     }
 
-    public void incoming(EventInfo ei) {
+    public boolean incoming(EventInfo ei) {
         log.debug("processing " + ei.uptype + " event for " + ei.action + " of " + ei.viewer.displayname);
+
+        // find or add viewer
         int viewerId = vb.findUserId(ei.viewer.username, ei.viewer.platform);
         if (viewerId < 0) {
             vb.addViewer(ei.viewer.username, ei.viewer.displayname, ei.viewer.platuserid, ei.viewer.platform);
@@ -20,28 +22,46 @@ public class TLogic {
             viewerId = vb.findUserId(ei.viewer.username, ei.viewer.platform);
             if (viewerId < 0) {
                 log.severe("viewerId still not existing after adding viewer, aborting incoming event");
-                return;
+                return false;
             }
         }
-        // TODO update viewer table info here
+        if (viewerId >= 0) {
+            ei.viewer.userId = viewerId;
+            // TODO update viewer table info here
+        }
+
+        // follow through with event actions
+        if (processEventActions(ei)) {
+            // add event to database if action success
+            addHistEvent(ei);
+            return true;
+        }
+        // if failure to process actions, incoming failed
+        return false;
+    }
+
+    private boolean processEventActions(EventInfo ei) {
+        boolean actSuccess = true;
         switch (ei.uptype) {
             case "present":
                 switch (ei.action) {
                     case "join":
-                        vb.addHistory(viewerId, ei.uptype, ei.action, ei.value, ei.timestamp);
-                        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
-                                + ei.viewer.displayname);
+
                         break;
                     case "message":
-                        vb.addHistory(viewerId, ei.uptype, ei.action, ei.value, ei.timestamp);
-                        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
-                                + ei.viewer.displayname);
+
                         // TODO add points
                         break;
-                    case "donation":
-                        vb.addHistory(viewerId, ei.uptype, ei.action, ei.value, ei.timestamp);
-                        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
-                                + ei.viewer.displayname);
+                    case "follow":
+
+                        // TODO add points
+                        break;
+                    case "subscribe":
+
+                        // TODO add points based on value
+                        break;
+                    case "donate":
+
                         // TODO add points based on value
                         break;
                 }
@@ -49,15 +69,28 @@ public class TLogic {
             case "absent":
                 switch (ei.action) {
                     case "leave":
-                        vb.addHistory(viewerId, ei.uptype, ei.action, ei.value, ei.timestamp);
-                        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
-                                + ei.viewer.displayname);
+
+                        break;
+                }
+                break;
+            case "technical":
+                switch (ei.action) {
+                    case "updateViewerData":
+
                         break;
                 }
                 break;
             default:
                 log.severe("malformed event: unknown event uptype");
+                actSuccess = false;
                 break;
         }
+        return actSuccess;
+    }
+
+    private void addHistEvent(EventInfo ei) {
+        vb.addHistory(ei.viewer.userId, ei.uptype, ei.action, ei.value, ei.timestamp);
+        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
+                + ei.viewer.displayname);
     }
 }
