@@ -39,6 +39,8 @@ public class Tasukaru extends CaffeinatedPlugin {
             return;
         }
 
+        // TODO implement DB version check & update logic
+
         // database init
         vb = new VBHandler(log, tDir + "/");
         vb.run();

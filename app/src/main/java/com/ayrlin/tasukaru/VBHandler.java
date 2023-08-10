@@ -5,8 +5,10 @@ import java.sql.*;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class VBHandler {
+    public static final String vbVersion = "1.0";
+
     private static Connection con;
-    private static boolean hasData = false;
+    private static boolean initd = false;
 
     private FastLogger log;
     private String tDir;
@@ -25,9 +27,21 @@ public class VBHandler {
     }
 
     private void initialise() throws SQLException {
-        if (!hasData) {
-            hasData = true;
-            // check for database table
+        if (!initd) {
+            initd = true;
+
+            ResultSet metaRes = con.createStatement()
+                    .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='meta'");
+            if (!metaRes.next()) {
+                log.warn("No Meta table found, creating new Meta table.");
+
+                // meta table definition
+                con.createStatement().executeUpdate("create table meta("
+                        + "property TEXT PRIMARY KEY,"
+                        + "value TEXT"
+                        + ");");
+                con.createStatement().executeUpdate("insert into meta values(\"version\",\"" + vbVersion + "\");");
+            }
             ResultSet viewerRes = con.createStatement()
                     .executeQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='viewers'");
             if (!viewerRes.next()) {
