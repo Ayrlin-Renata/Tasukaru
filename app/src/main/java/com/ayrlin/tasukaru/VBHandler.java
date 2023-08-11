@@ -121,11 +121,13 @@ public class VBHandler {
         try {
             PreparedStatement prep = con
                     .prepareStatement(
-                            "insert into viewers(username,displayname,platuserid,platform,watchtime,tskrpoints) values(?,?,?,?);");
+                            "insert into viewers(username,displayname,platuserid,platform,watchtime,tskrpoints) values(?,?,?,?,?,?);");
             prep.setString(1, username);
-            prep.setString(2, platform);
-            prep.setInt(3, watchtime);
-            prep.setInt(4, tskrpoints);
+            prep.setString(2, displayname);
+            prep.setString(3, platuserid);
+            prep.setString(4, platform);
+            prep.setInt(5, watchtime);
+            prep.setInt(6, tskrpoints);
             prep.execute();
         } catch (SQLException e) {
             log.severe("failed to execute addViewer() SQL.");
