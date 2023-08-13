@@ -13,27 +13,31 @@ public class TLogic {
 
     public boolean incoming(EventInfo ei) {
         log.debug("processing " + ei.uptype + " event for " + ei.action + " of " + ei.viewer.displayname);
+        log.trace(ei);
 
         // find or add viewer
-        int viewerId = vb.findUserId(ei.viewer.username, ei.viewer.platform);
-        if (viewerId < 0) {
-            vb.addViewer(ei.viewer.username, ei.viewer.displayname, ei.viewer.platuserid, ei.viewer.platform);
-            // TODO add history event for adding viewer
-            viewerId = vb.findUserId(ei.viewer.username, ei.viewer.platform);
+        int viewerId = vb.findViewerId(ei.viewer);
+        if (viewerId == -2) {
+            log.severe("aborting incoming event: error finding viewer id for event: \n" + ei);
+            return false;
+        } else if (viewerId == -1) {
+            vb.addViewer(ei.viewer);
+            // check viewer exists
+            viewerId = vb.findViewerId(ei.viewer);
             if (viewerId < 0) {
-                log.severe("viewerId still not existing after adding viewer, aborting incoming event");
+                log.severe("viewerId still not existing after adding viewer, aborting incoming event: \n" + ei);
                 return false;
             }
         }
         if (viewerId >= 0) {
-            ei.viewer.userId = viewerId;
             // TODO update viewer table info here
+            // compare viewer info with current viewer table, make snapshot if different
         }
 
         // follow through with event actions
         if (processEventActions(ei)) {
             // add event to database if action success
-            addHistEvent(ei);
+            vb.addHistory(ei);
             return true;
         }
         // if failure to process actions, incoming failed
@@ -86,11 +90,5 @@ public class TLogic {
                 break;
         }
         return actSuccess;
-    }
-
-    private void addHistEvent(EventInfo ei) {
-        vb.addHistory(ei.viewer.userId, ei.uptype, ei.action, ei.value, ei.timestamp);
-        log.trace("adding " + ei.uptype + "  history event for " + ei.action + " of "
-                + ei.viewer.displayname);
     }
 }

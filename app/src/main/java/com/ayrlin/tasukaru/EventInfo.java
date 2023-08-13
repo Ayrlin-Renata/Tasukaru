@@ -6,6 +6,7 @@ public class EventInfo {
 
     public Timestamp timestamp;
     public ViewerInfo viewer;
+    public int snapshotId;
     public String uptype;
     public String action;
     public int value;
@@ -20,6 +21,11 @@ public class EventInfo {
 
     public EventInfo viewer(ViewerInfo viewer) {
         this.viewer = viewer;
+        return this;
+    }
+
+    public EventInfo snapshotId(int snapshotId) {
+        this.snapshotId = snapshotId;
         return this;
     }
 
