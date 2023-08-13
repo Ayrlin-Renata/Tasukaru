@@ -22,8 +22,18 @@ dependencies {
     // This dependency is used by the application.
     implementation("com.google.guava:guava:31.0.1-jre")
 
+    //Casterlabs Caffeinated PluginSDK
     compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849e")
+
+    //JDBC SQLite library
     implementation("org.xerial:sqlite-jdbc:3.42.0.0")
+
+    //lombok Java annotations
+    compileOnly("org.projectlombok:lombok:1.18.28")
+    annotationProcessor("org.projectlombok:lombok:1.18.28")
+
+    testCompileOnly("org.projectlombok:lombok:1.18.28")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.28")
 }
 
 testing {
@@ -48,7 +58,7 @@ tasks.register("export", Copy::class) {
     rename("app.jar", "tasukaru.jar")
 }
 
-// Java 11 Adopt...io... or something
+// Java 11 Eclipse Adoptium
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(11))

@@ -6,7 +6,9 @@ import java.util.stream.Collectors;
 
 import co.casterlabs.koi.api.types.user.User;
 import co.casterlabs.koi.api.types.user.User.UserRoles;
+import lombok.ToString;
 
+@ToString
 public class ViewerInfo {
     public int id = -1; // actual SQL table id
     public String userId; // similar to koi.api.types.user.User.id

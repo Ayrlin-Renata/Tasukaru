@@ -131,6 +131,7 @@ public class VBHandler {
                 + "action TEXT,"
                 + "value INTEGER,"
                 + "timestamp TEXT,"
+                + "streamstate TEXT,"
                 + "FOREIGN KEY(vid) REFERENCES viewers(id)"
                 + "FOREIGN KEY(sid) REFERENCES vsnapshots(id)"
                 + ");");
@@ -263,7 +264,7 @@ public class VBHandler {
         }
         log.debug("Adding history for event: \n" + ei);
 
-        String query = "insert into history(vid,sid,uptype,action,value,timestamp) values(?,?,?,?,?,?);";
+        String query = "insert into history(vid,sid,uptype,action,value,streamState,timestamp) values(?,?,?,?,?,?,?);";
         try {
             PreparedStatement prep = con.prepareStatement(query);
             prep.setInt(1, ei.viewer.id);
@@ -271,7 +272,8 @@ public class VBHandler {
             prep.setString(3, ei.uptype);
             prep.setString(4, ei.action);
             prep.setInt(5, ei.value);
-            prep.setTimestamp(6, ei.timestamp);
+            prep.setString(6, ei.streamState);
+            prep.setTimestamp(7, ei.timestamp);
             prep.execute();
         } catch (SQLException e) {
             log.severe("failed to execute addHistory() SQL for event: \n" + ei);
@@ -328,9 +330,6 @@ public class VBHandler {
             } else if (!vi.username.isEmpty()) {
                 query = "`username` == ?";
                 param2 = vi.username;
-            } else if (!vi.channelId.isEmpty()) {
-                query = "`channelId` == ?";
-                param2 = vi.channelId;
             } else if (!vi.link.isEmpty()) {
                 query = "`link` == ?";
                 param2 = vi.link;
