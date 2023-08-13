@@ -367,7 +367,8 @@ public class VBHandler {
             return -2;
         }
 
-        log.trace("found userId " + viewerId + " for viewer: \n" + vi);
+        vi.id(viewerId);
+        log.trace("found viewer id " + viewerId + " for viewer: \n" + vi);
         return viewerId;
     }
 }
