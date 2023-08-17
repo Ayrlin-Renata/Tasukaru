@@ -17,6 +17,10 @@ public class EventInfo {
 
     public EventInfo(Timestamp timestamp) {
         this.timestamp = timestamp;
+        // defaults
+        this.snapshotId = -1;  
+        this.value = -1; 
+        this.streamState = "unrecorded";
     }
 
     public EventInfo() {

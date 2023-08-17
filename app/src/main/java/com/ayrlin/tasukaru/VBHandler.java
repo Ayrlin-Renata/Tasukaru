@@ -1,10 +1,17 @@
 package com.ayrlin.tasukaru;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.ayrlin.sqlutil.SQLUtil;
+import com.ayrlin.sqlutil.query.Parameter;
+import com.ayrlin.sqlutil.query.Parameter.DataType;
+
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class VBHandler {
-    public static final String vbVersion = "1.0";
+    public static final String vbVersion = "1.0.0";
 
     private static Connection con;
     private static boolean initd = false;
@@ -39,6 +46,17 @@ public class VBHandler {
                 log.warn("No Meta table found, creating new Meta table.");
                 createMetaTable();
             }
+            String checkVersion = "SELECT value FROM `meta` WHERE property = \"version\";";
+            ResultSet versionCheckResult = con.createStatement().executeQuery(checkVersion);
+            if(!versionCheckResult.next()) {
+                log.severe("malformed meta table has no version");
+            } else {
+                String readVersion = versionCheckResult.getString("version"); 
+                if(!readVersion.equals(vbVersion)) {
+                    log.warn("Mismatched versions! Database reports as version " + readVersion + ", plugin version is " + vbVersion + "!");
+                    //TODO update DB to current version, including backup
+                }
+            }
 
             // VIEWER SNAPSHOT
             if (!con.createStatement()
@@ -68,7 +86,7 @@ public class VBHandler {
 
     private void createMetaTable() throws SQLException {
         // meta table definition
-        con.createStatement().executeUpdate("create table meta("
+        con.createStatement().executeUpdate("CREATE TABLE `meta` ("
                 + "property TEXT PRIMARY KEY,"
                 + "value TEXT"
                 + ");");
@@ -77,7 +95,7 @@ public class VBHandler {
 
     private void createViewerSnapshotTable() throws SQLException {
         // vsnapshots table definition
-        con.createStatement().executeUpdate("create table vsnapshots("
+        con.createStatement().executeUpdate("CREATE TABLE `vsnapshots` ("
                 + "id INTEGER PRIMARY KEY,"
                 + "vid INTEGER NOT NULL,"
                 + "userId TEXT," // koi.api.types.user.User.id
@@ -94,14 +112,15 @@ public class VBHandler {
                 + "imageLink TEXT,"
                 + "followersCount INTEGER,"
                 + "subCount INTEGER,"
-                + "FOREIGN KEY(vid) REFERENCES viewers(id)"
+                + "FOREIGN KEY (vid) REFERENCES `viewers` (id)"
                 + ");");
     }
 
     private void createViewerTable() throws SQLException {
         // viewers table definition
-        con.createStatement().executeUpdate("create table viewers(" // TODO implement UPID
+        con.createStatement().executeUpdate("CREATE TABLE `viewers` (" 
                 + "id INTEGER PRIMARY KEY,"
+                + "latestSnapshot INTEGER,"
                 + "userId TEXT," // koi.api.types.user.User.id
                 + "channelId TEXT,"
                 + "platform TEXT," // koi.api.types.user.User.platform.name
@@ -117,13 +136,14 @@ public class VBHandler {
                 + "followersCount INTEGER,"
                 + "subCount INTEGER,"
                 + "watchtime INTEGER," // in seconds, would take ~130 years to go over 32 bit
-                + "tskrpoints INTEGER"
+                + "tskrpoints INTEGER,"
+                + "FOREIGN KEY (latestSnapshot) REFERENCES `vsnapshots` (id)"
                 + ");");
     }
 
     private void createHistoryTable() throws SQLException {
         // history table definition
-        con.createStatement().executeUpdate("create table history("
+        con.createStatement().executeUpdate("CREATE TABLE `history` ("
                 + "id INTEGER PRIMARY KEY,"
                 + "vid INTEGER NOT NULL," // foreign key viewers
                 + "sid INTEGER NOT NULL," // foreign key vsnapshots
@@ -132,8 +152,8 @@ public class VBHandler {
                 + "value INTEGER,"
                 + "timestamp TEXT,"
                 + "streamstate TEXT,"
-                + "FOREIGN KEY(vid) REFERENCES viewers(id)"
-                + "FOREIGN KEY(sid) REFERENCES vsnapshots(id)"
+                + "FOREIGN KEY (vid) REFERENCES `viewers` (id)"
+                + "FOREIGN KEY (sid) REFERENCES `vsnapshots` (id)"
                 + ");");
     }
 
@@ -159,100 +179,138 @@ public class VBHandler {
 
     ///////////////// VB ACTIONS //////////////////
 
-    public void addViewer(ViewerInfo vi) {
+    public int addViewer(ViewerInfo vi) {
         if (con == null) {
             getConnection();
         }
         log.debug("Adding viewer: \n" + vi);
 
-        String query = "INSERT INTO viewers(userId, channelId, platform, UPID, roles, badges, color, username, displayname, bio, link, imageLink, followersCount, subCount, watchtime, tskrpoints) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setString(1, vi.userId);
-            prep.setString(2, vi.channelId);
-            prep.setString(3, vi.platform);
-            prep.setString(4, vi.UPID);
-            prep.setString(5, vi.getRoles());
-            prep.setString(6, vi.getBadges());
-            prep.setString(7, vi.color);
-            prep.setString(8, vi.username);
-            prep.setString(9, vi.displayname);
-            prep.setString(10, vi.bio);
-            prep.setString(11, vi.link);
-            prep.setString(12, vi.imageLink);
-            prep.setLong(13, vi.followersCount);
-            prep.setLong(14, vi.subCount);
-            prep.setLong(15, vi.watchtime);
-            prep.setLong(16, vi.tskrpoints);
-            prep.execute();
-        } catch (SQLException e) {
-            log.severe("failed to execute addViewer() SQL query: \n" + query + "\nfor viewer:\n" + vi);
-            e.printStackTrace();
-            return;
-        }
+        List<Parameter> params = new ArrayList<>();
+        params.add(new Parameter(DataType.INT, "latestSnapshot", -1)); //default
+        params.add(new Parameter(DataType.STRING, "userId", vi.userId));
+        params.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
+        params.add(new Parameter(DataType.STRING, "platform", vi.platform));
+        params.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
 
-        addViewerSnapshot(vi.id(retrieveLastInsertId()));
+        params.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
+        params.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
+        params.add(new Parameter(DataType.STRING, "color", vi.color));
+        params.add(new Parameter(DataType.STRING, "username", vi.username));
+        params.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
+        params.add(new Parameter(DataType.STRING, "bio", vi.bio));
+        params.add(new Parameter(DataType.STRING, "link", vi.link));
+        params.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
+        params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
+        params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+
+        params.add(new Parameter(DataType.INT, "watchtime", vi.watchtime));
+        params.add(new Parameter(DataType.INT, "tskrpoints", vi.tskrpoints));
+
+        if(!SQLUtil.insert(con, "viewers", params)) {
+            log.severe("failed to add viewer: \n" + vi);
+            return -1;
+        } 
+
+        //add snapshot after viewer for foreign key
+        int vid = SQLUtil.retrieveLastInsertId(con);
+        int snapshot = addViewerSnapshot(vi.id(vid));
+
+        //update new viewer entry to have latest snapshot id
+        List<Parameter> sParams = new ArrayList<>();
+        sParams.add(new Parameter(DataType.INT, "latestSnapshot", snapshot));
+        List<Parameter> wParams = new ArrayList<>();
+        wParams.add(new Parameter(DataType.INT, "id", vi.id));
+
+        if(!SQLUtil.update(con, "viewers", sParams, wParams)) {
+            log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
+            return -1;
+        } 
+
+        return vid;
     }
 
-    // public void addHistory(String username, String platform, String uptype,
-    // String action, int value) {
-    // int userId = findUserId(username, platform);
-    // if (userId < 0) {
-    // log.severe("unable to add history for user " + username + "on" + platform
-    // + ": " + uptype + "," + action + "," + value);
-    // return;
-    // }
-    // addHistory(userId, uptype, action, value);
-    // }
+    public void updateViewer(ViewerInfo vi) {
+        if (con == null) {
+            getConnection();
+        }
+        log.debug("Updating viewer info: " + vi);
+        
+        int snapshot = addViewerSnapshot(vi);
+        
+        List<Parameter> setParams = new ArrayList<>();
+        setParams.add(new Parameter(DataType.INT, "latestSnapshot", snapshot));
+        setParams.add(new Parameter(DataType.STRING, "userId", vi.userId));
+        setParams.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
+        setParams.add(new Parameter(DataType.STRING, "platform", vi.platform));
+        setParams.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
 
-    // public void addHistory(int userid, String uptype, String action, int value) {
-    // Timestamp now = new java.sql.Timestamp(new java.util.Date().getTime());
-    // addHistory(userid, uptype, action, value, now);
-    // }
+        setParams.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
+        setParams.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
+        setParams.add(new Parameter(DataType.STRING, "color", vi.color));
+        setParams.add(new Parameter(DataType.STRING, "username", vi.username));
+        setParams.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
+        setParams.add(new Parameter(DataType.STRING, "bio", vi.bio));
+        setParams.add(new Parameter(DataType.STRING, "link", vi.link));
+        setParams.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
+        setParams.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
+        setParams.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+        
+        List<Parameter> whereParams = new ArrayList<>();
+        whereParams.add(new Parameter(DataType.INT, "id", vi.id));
+        
+        if(!SQLUtil.update(con, "viewers", setParams, whereParams)) {
+            log.severe("failed to update viewer: \n" + vi);
+            return;
+        } 
+    }
 
-    private void addViewerSnapshot(ViewerInfo vi) {
+    public int addViewerSnapshot(ViewerInfo vi) {
+        if (con == null) {
+            getConnection();
+        }
         log.debug("Adding viewer snapshot for viewer: \n" + vi);
+
         if (vi.id <= 0) {
             int vid = findViewerId(vi);
             if (vid < 0) {
                 log.severe("Failed to add viewer snapshot due to lack of id for viewer: \n" + vi);
-                return;
+                return -1;
             } else {
                 vi.id = vid;
             }
         }
 
-        String query = "INSERT INTO vsnapshots(vid, userId, channelId, platform, UPID, roles, badges, color, username, displayname, bio, link, imageLink, followersCount, subCount) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setInt(1, vi.id);
-            prep.setString(2, vi.userId);
-            prep.setString(3, vi.channelId);
-            prep.setString(4, vi.platform);
-            prep.setString(5, vi.UPID);
-            prep.setString(6, vi.getRoles());
-            prep.setString(7, vi.getBadges());
-            prep.setString(8, vi.color);
-            prep.setString(9, vi.username);
-            prep.setString(10, vi.displayname);
-            prep.setString(11, vi.bio);
-            prep.setString(12, vi.link);
-            prep.setString(13, vi.imageLink);
-            prep.setLong(14, vi.followersCount);
-            prep.setLong(15, vi.subCount);
-            prep.execute();
-        } catch (SQLException e) {
-            log.severe("failed to execute addViewer() SQL query: \n" + query + "\nfor viewer:\n" + vi);
-            e.printStackTrace();
-            return;
+        List<Parameter> params = new ArrayList<>();
+        params.add(new Parameter(DataType.INT, "vid", vi.id));
+        params.add(new Parameter(DataType.STRING, "userId", vi.userId));
+        params.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
+        params.add(new Parameter(DataType.STRING, "platform", vi.platform));
+        params.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
+
+        params.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
+        params.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
+        params.add(new Parameter(DataType.STRING, "color", vi.color));
+        params.add(new Parameter(DataType.STRING, "username", vi.username));
+        params.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
+        params.add(new Parameter(DataType.STRING, "bio", vi.bio));
+        params.add(new Parameter(DataType.STRING, "link", vi.link));
+        params.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
+        params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
+        params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+
+        if(!SQLUtil.insert(con, "vsnapshots", params)) {
+            log.severe("Failed to add viewer snapshot for viewer: \n" + vi);
+            return -1;
         }
 
         EventInfo ei = new EventInfo()
                 .viewer(vi)
-                .snapshotId(retrieveLastInsertId())
+                .snapshotId(SQLUtil.retrieveLastInsertId(con))
                 .uptype("technical")
                 .action("vsnapshot");
         addHistory(ei);
+
+        return SQLUtil.retrieveLastInsertId(con);
     }
 
     public void addHistory(EventInfo ei) {
@@ -264,39 +322,18 @@ public class VBHandler {
         }
         log.debug("Adding history for event: \n" + ei);
 
-        String query = "insert into history(vid,sid,uptype,action,value,streamState,timestamp) values(?,?,?,?,?,?,?);";
-        try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setInt(1, ei.viewer.id);
-            prep.setInt(2, ei.snapshotId);
-            prep.setString(3, ei.uptype);
-            prep.setString(4, ei.action);
-            prep.setInt(5, ei.value);
-            prep.setString(6, ei.streamState);
-            prep.setTimestamp(7, ei.timestamp);
-            prep.execute();
-        } catch (SQLException e) {
-            log.severe("failed to execute addHistory() SQL for event: \n" + ei);
-            e.printStackTrace();
-        }
-    }
+        List<Parameter> params = new ArrayList<>();
+        params.add(new Parameter(DataType.INT, "vid", ei.viewer.id));
+        params.add(new Parameter(DataType.INT, "sid", ei.snapshotId));
+        params.add(new Parameter(DataType.STRING, "uptype", ei.uptype));
+        params.add(new Parameter(DataType.STRING, "action", ei.action));
+        params.add(new Parameter(DataType.INT, "value", ei.value));
+        params.add(new Parameter(DataType.STRING, "streamState", ei.streamState));
+        params.add(new Parameter(DataType.TIMESTAMP, "timestamp", ei.timestamp));
 
-    /**
-     * 
-     * @return last insert primary key if successful,
-     *         -1 if error
-     */
-    private int retrieveLastInsertId() {
-        String query = "SELECT last_insert_rowid();";
-        int lid;
-        try {
-            PreparedStatement prep = con.prepareStatement(query);
-            lid = prep.executeQuery().getInt("last_insert_rowid()");
-        } catch (SQLException e) {
-            log.severe("SQLException while retrieving last insert ID.");
-            return -1;
+        if(!SQLUtil.insert(con, "history", params)) {
+            log.severe("failed to addHistory() for event: \n" + ei);
         }
-        return lid;
     }
 
     /**
@@ -360,7 +397,7 @@ public class VBHandler {
             }
             viewerId = res.getInt("id");
         } catch (SQLException e) {
-            log.severe("SQLException while finding user: \n" + vi + "\nusing SQL: \n" + query + "\n and parameter(s): "
+            log.severe("SQLException while finding viewer: \n" + vi + "\nusing SQL: \n" + query + "\n and parameter(s): "
                     + param1 + ((secondParam == 1) ? " and " + param2 : ""));
             e.printStackTrace();
             return -2;
@@ -369,5 +406,74 @@ public class VBHandler {
         vi.id(viewerId);
         log.trace("found viewer id " + viewerId + " for viewer: \n" + vi);
         return viewerId;
+    }
+
+    public boolean verifyCurrentViewerInfo(ViewerInfo vi) {
+        if (con == null) {
+            getConnection();
+        }
+        log.trace("verifying viewer info is current.");
+
+        boolean isCurrent = true; 
+        String query = "SELECT * FROM viewers WHERE id == ?";
+        try {
+            PreparedStatement prep = con.prepareStatement(query);
+            prep.setInt(1, vi.id);
+            ResultSet res = prep.executeQuery();
+            if (!res.next()) {
+                log.warn("unable to find viewer: \n" + vi);
+                return false;
+            }
+
+            //no userId, diff userId means diff account
+            if(!res.getString("channelId").equals(vi.channelId)) { isCurrent = false; }
+            //no platform, diff platform and same id etc. means something is weirdchamp
+            if(!res.getString("roles").equals(vi.getRoles())) {
+                //if this breaks compare lists (unordered)
+                log.trace("query roles: \n" + res.getString("roles") + " are not similar to VI roles: \n" + vi.getRoles());
+            } 
+            if(!res.getString("badges").equals(vi.getBadges())) {
+                //if this breaks compare lists (unordered)
+                log.trace("query roles: \n" + res.getString("badges") + " are not similar to VI roles: \n" + vi.getBadges());
+            }
+            if(!res.getString("color").equals(vi.color)) { isCurrent = false; }
+            if(!res.getString("username").equals(vi.username)) { isCurrent = false; }
+            if(!res.getString("displayname").equals(vi.displayname)) { isCurrent = false; }
+            if(!res.getString("bio").equals(vi.bio)) { isCurrent = false; }
+            if(!res.getString("link").equals(vi.link)) { isCurrent = false; }
+            if(!res.getString("imageLink").equals(vi.imageLink)) { isCurrent = false; }
+            if(res.getInt("followersCount") != vi.followersCount) { isCurrent = false; }
+            if(res.getInt("subCount") != vi.subCount) { isCurrent = false; }
+            //no user data like watchtime/tskrpoints
+            
+        } catch (SQLException e) {
+            log.severe("SQLException while verifying viewer info: \n" + vi);
+            e.printStackTrace();
+        }
+        return isCurrent;
+    }
+
+    public int findLatestSnapshot(int vid) {
+        if (con == null) {
+            getConnection();
+        }
+        log.trace("searching for id of latest snapshot for viewer with id: " + vid);
+
+        int sid = -1;
+        String query = "SELECT latestSnapshot FROM `viewers` WHERE id = ?";
+        try {
+            PreparedStatement prep = con.prepareStatement(query);
+            prep.setInt(1, vid);
+            ResultSet res = prep.executeQuery();
+            if (!res.next()) {
+                log.warn("unable to find viewer latestSnapshot for viewer with id: " + vid);
+                return -1;
+            }
+            sid = res.getInt("latestSnapshot");
+        } catch (SQLException e) {
+            log.severe("SQLException while searching for viewer latest snapshot: " + vid);
+            e.printStackTrace();
+        }
+        return sid;
     }
 }

@@ -30,8 +30,11 @@ public class TLogic {
             }
         }
         if (viewerId >= 0) {
-            // TODO update viewer table info here
-            // compare viewer info with current viewer table, make snapshot if different
+            if(!vb.verifyCurrentViewerInfo(ei.viewer)) {
+                // compare viewer info with current viewer table, make snapshot if different
+                vb.updateViewer(ei.viewer);
+            } 
+            ei.snapshotId = vb.findLatestSnapshot(ei.viewer.id);
         }
 
         // follow through with event actions

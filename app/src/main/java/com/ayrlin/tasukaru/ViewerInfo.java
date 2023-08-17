@@ -45,6 +45,7 @@ public class ViewerInfo {
         this.bio = user.getBio();
         this.link = user.getLink();
         this.imageLink = user.getImageLink();
+        if(imageLink == null) {imageLink = "";} //workaround for null return
         this.followersCount = user.getFollowersCount();
         this.subCount = user.getSubCount();
     }
@@ -158,5 +159,4 @@ public class ViewerInfo {
     public String getBadges() {
         return badges.stream().map(Object::toString).collect(Collectors.joining(","));
     }
-
 }
