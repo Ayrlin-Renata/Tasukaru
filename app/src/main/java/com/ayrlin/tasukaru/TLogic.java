@@ -82,7 +82,7 @@ public class TLogic {
                 break;
             case "technical":
                 switch (ei.action) {
-                    case "updateViewerData":
+                    case "vsnapshot":
 
                         break;
                 }

@@ -10,7 +10,8 @@ import lombok.ToString;
 
 @ToString
 public class ViewerInfo {
-    public int id = -1; // actual SQL table id
+    public int id; // actual SQL table id
+    public int latestSnapshot;
     public String userId; // similar to koi.api.types.user.User.id
     public String channelId;
     public String platform;
@@ -28,11 +29,9 @@ public class ViewerInfo {
     public long watchtime;
     public long tskrpoints;
 
-    public ViewerInfo() {
-
-    }
-
     public ViewerInfo(User user) {
+        this.id = -1;
+        this.latestSnapshot = -1;
         this.userId = user.getId();
         this.channelId = user.getChannelId();
         this.platform = user.getPlatform().name();
@@ -54,6 +53,11 @@ public class ViewerInfo {
         this.id = id;
         return this;
     }
+
+    public ViewerInfo latestSnapshot(int latestSnapshot) {
+        this.latestSnapshot = latestSnapshot;
+        return this;
+    } 
 
     public ViewerInfo userId(String userId) {
         this.userId = userId;

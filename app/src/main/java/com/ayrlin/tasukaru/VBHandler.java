@@ -213,11 +213,11 @@ public class VBHandler {
 
         //add snapshot after viewer for foreign key
         int vid = SQLUtil.retrieveLastInsertId(con);
-        int snapshot = addViewerSnapshot(vi.id(vid));
+        vi.latestSnapshot = addViewerSnapshot(vi.id(vid));
 
         //update new viewer entry to have latest snapshot id
         List<Parameter> sParams = new ArrayList<>();
-        sParams.add(new Parameter(DataType.INT, "latestSnapshot", snapshot));
+        sParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
         List<Parameter> wParams = new ArrayList<>();
         wParams.add(new Parameter(DataType.INT, "id", vi.id));
 
@@ -235,10 +235,10 @@ public class VBHandler {
         }
         log.debug("Updating viewer info: " + vi);
         
-        int snapshot = addViewerSnapshot(vi);
+        vi.latestSnapshot = addViewerSnapshot(vi);
         
         List<Parameter> setParams = new ArrayList<>();
-        setParams.add(new Parameter(DataType.INT, "latestSnapshot", snapshot));
+        setParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
         setParams.add(new Parameter(DataType.STRING, "userId", vi.userId));
         setParams.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
         setParams.add(new Parameter(DataType.STRING, "platform", vi.platform));
