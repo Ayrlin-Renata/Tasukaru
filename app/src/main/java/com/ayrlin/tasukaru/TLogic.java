@@ -32,6 +32,7 @@ public class TLogic {
         if (viewerId >= 0) {
             if(!vb.verifyCurrentViewerInfo(ei.viewer)) {
                 // compare viewer info with current viewer table, make snapshot if different
+                // TODO viewer from table to VI, merge old VI as basis with new VI
                 vb.updateViewer(ei.viewer);
             } 
             ei.snapshotId = vb.findLatestSnapshot(ei.viewer.id);

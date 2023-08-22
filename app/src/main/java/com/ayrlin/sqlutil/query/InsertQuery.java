@@ -46,7 +46,7 @@ public class InsertQuery implements Query {
         
         //String values = String.join(", ", pStream.map(Parameter::getValue).collect(Collectors.toList()));
         List<String> qMarks = new ArrayList<String>(); 
-        for(Parameter p : params) {
+        for (int i = 0; i < params.size(); i++) {
             qMarks.add("?");
         }
         String values = String.join(", ", qMarks);

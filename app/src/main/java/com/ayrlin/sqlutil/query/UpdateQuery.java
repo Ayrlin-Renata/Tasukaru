@@ -18,6 +18,7 @@ public class UpdateQuery implements Query {
 
     public UpdateQuery() {
         set = new ArrayList<Parameter>();
+        where = new ArrayList<Parameter>();
     }
 
     public UpdateQuery update(String update) {

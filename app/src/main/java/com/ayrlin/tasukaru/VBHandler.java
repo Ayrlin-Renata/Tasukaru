@@ -212,8 +212,7 @@ public class VBHandler {
         } 
 
         //add snapshot after viewer for foreign key
-        int vid = SQLUtil.retrieveLastInsertId(con);
-        vi.latestSnapshot = addViewerSnapshot(vi.id(vid));
+        addViewerSnapshot(vi.id(SQLUtil.retrieveLastInsertId(con)));
 
         //update new viewer entry to have latest snapshot id
         List<Parameter> sParams = new ArrayList<>();
@@ -226,7 +225,7 @@ public class VBHandler {
             return -1;
         } 
 
-        return vid;
+        return vi.id;
     }
 
     public void updateViewer(ViewerInfo vi) {
@@ -235,7 +234,7 @@ public class VBHandler {
         }
         log.debug("Updating viewer info: " + vi);
         
-        vi.latestSnapshot = addViewerSnapshot(vi);
+        addViewerSnapshot(vi);
         
         List<Parameter> setParams = new ArrayList<>();
         setParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
@@ -303,6 +302,8 @@ public class VBHandler {
             return -1;
         }
 
+        vi.latestSnapshot = SQLUtil.retrieveLastInsertId(con);
+
         EventInfo ei = new EventInfo()
                 .viewer(vi)
                 .snapshotId(SQLUtil.retrieveLastInsertId(con))
@@ -310,7 +311,7 @@ public class VBHandler {
                 .action("vsnapshot");
         addHistory(ei);
 
-        return SQLUtil.retrieveLastInsertId(con);
+        return vi.latestSnapshot;
     }
 
     public void addHistory(EventInfo ei) {
@@ -415,7 +416,7 @@ public class VBHandler {
         log.trace("verifying viewer info is current.");
 
         boolean isCurrent = true; 
-        String query = "SELECT * FROM viewers WHERE id == ?";
+        String query = "SELECT * FROM viewers WHERE id == ?"; //TODO turn this into a sqlutil helper func
         try {
             PreparedStatement prep = con.prepareStatement(query);
             prep.setInt(1, vi.id);
@@ -425,6 +426,7 @@ public class VBHandler {
                 return false;
             }
 
+            //TODO change cases to ignore default or blank values
             //no userId, diff userId means diff account
             if(!res.getString("channelId").equals(vi.channelId)) { isCurrent = false; }
             //no platform, diff platform and same id etc. means something is weirdchamp

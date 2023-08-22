@@ -14,6 +14,7 @@ public class EventInfo {
     public String action;
     public int value;
     public String streamState;
+    //TODO also add rson event storage 
 
     public EventInfo(Timestamp timestamp) {
         this.timestamp = timestamp;
