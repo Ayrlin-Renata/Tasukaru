@@ -15,7 +15,8 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
-    maven(url = "https://jitpack.io")
+    maven(url = "https://repo.casterlabs.co/caffeinated")
+    maven(url = "https://jitpack.io/")
 }
 
 dependencies {
@@ -23,7 +24,7 @@ dependencies {
     implementation("com.google.guava:guava:31.0.1-jre")
 
     //Casterlabs Caffeinated PluginSDK
-    compileOnly("co.casterlabs.Casterlabs:PluginSDK:8383849e")
+    compileOnly("co.casterlabs:PluginSDK:1.2-1d5324c2-stable")
 
     //JDBC SQLite library
     implementation("org.xerial:sqlite-jdbc:3.42.0.0")

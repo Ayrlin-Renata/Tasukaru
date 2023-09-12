@@ -82,6 +82,7 @@ public class SQLUtil {
             FastLogger.logStatic(LogLevel.SEVERE,"SQLException while retrieving last insert ID.");
             return -1;
         }
+        FastLogger.logStatic(LogLevel.TRACE,"Last Insert ID Retrieved: " + lid);
         return lid;
     }
 }

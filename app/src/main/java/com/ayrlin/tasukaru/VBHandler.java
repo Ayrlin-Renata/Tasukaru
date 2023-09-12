@@ -212,7 +212,8 @@ public class VBHandler {
         } 
 
         //add snapshot after viewer for foreign key
-        addViewerSnapshot(vi.id(SQLUtil.retrieveLastInsertId(con)));
+        addViewerSnapshot(vi.latestSnapshot(SQLUtil.retrieveLastInsertId(con)));
+        log.trace("added snapshot " + vi.latestSnapshot);
 
         //update new viewer entry to have latest snapshot id
         List<Parameter> sParams = new ArrayList<>();
