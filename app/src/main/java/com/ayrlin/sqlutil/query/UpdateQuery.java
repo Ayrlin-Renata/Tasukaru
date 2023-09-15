@@ -5,10 +5,14 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.ayrlin.sqlutil.SQLUtil;
 
 import lombok.ToString;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
+import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @ToString
 public class UpdateQuery implements Query {
@@ -21,8 +25,8 @@ public class UpdateQuery implements Query {
         where = new ArrayList<Parameter>();
     }
 
-    public UpdateQuery update(String update) {
-        this.update = update;
+    public UpdateQuery update(String table) {
+        this.update = table;
         return this;
     }
 
@@ -31,8 +35,8 @@ public class UpdateQuery implements Query {
         return this;
     }
 
-    public UpdateQuery where(List<Parameter> params) {
-        where.addAll(params);
+    public UpdateQuery where(List<Parameter> match) {
+        where.addAll(match);
         return this;
     }
 
@@ -49,24 +53,25 @@ public class UpdateQuery implements Query {
     public String getQueryString() {
         List<String> setList = new ArrayList<>();
         for(Parameter p : set) {
-            setList.add(p.getColumn() + " = ?");
+            setList.add("\"" + p.getColumn() + "\" = ?");
         }
         String setString = String.join(", ",setList);
 
         List<String> whereList = new ArrayList<>();
         for(Parameter p : where) {
-            whereList.add(p.getColumn() + " = ?");
+            whereList.add("\"" + p.getColumn() + "\" = ?");
         }
-        String whereString = String.join(", ",whereList);
+        String whereString = String.join(" AND ",whereList);
 
         return "UPDATE `" + update + "` SET " + setString + " WHERE " + whereString + ";"; 
     }
 
     @Override
     public PreparedStatement prepare(Connection con) throws SQLException {
-        PreparedStatement prep = con.prepareStatement(getQueryString());
-        prep = SQLUtil.prepDataTypes(prep, set);
-        prep = SQLUtil.prepDataTypes(prep, where);
+        String query = getQueryString();
+        PreparedStatement prep = con.prepareStatement(query);
+        prep = SQLUtil.prepDataTypes(prep, Stream.concat(set.stream(), where.stream()).collect(Collectors.toList()));
+        FastLogger.logStatic(LogLevel.TRACE, "Prepared SQL UPDATE query: \n" + query + "\n SET params: \n" + set + "\n WHERE params: \n" + where);
         return prep;
     }
     

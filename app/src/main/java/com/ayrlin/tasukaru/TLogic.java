@@ -21,12 +21,20 @@ public class TLogic {
             log.severe("aborting incoming event: error finding viewer id for event: \n" + ei);
             return false;
         } else if (viewerId == -1) {
-            vb.addViewer(ei.viewer);
-            // check viewer exists
-            viewerId = vb.findViewerId(ei.viewer);
-            if (viewerId < 0) {
-                log.severe("viewerId still not existing after adding viewer, aborting incoming event: \n" + ei);
-                return false;
+            viewerId = vb.addViewer(ei.viewer);
+            if(viewerId < 0) {
+                if(viewerId == -1) {
+                    //sqlerror
+                    log.severe("error adding viewer, aborting incoming event: \n" + ei);
+                    return false;
+                }
+                if(viewerId == -2) {
+                    //no latestSnapshot update for unexpected reasons
+                    if(!vb.updateViewer(ei.viewer)) {
+                        //failed retry
+                        log.warn("added viewer missing latestSnapshot, silently continuing incoming event: \n" + ei);
+                    }
+                }
             }
         }
         if (viewerId >= 0) {

@@ -3,6 +3,7 @@ package com.ayrlin.sqlutil.query;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -11,6 +12,8 @@ import java.util.stream.Stream;
 import com.ayrlin.sqlutil.SQLUtil;
 
 import lombok.ToString;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
+import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @ToString
 public class InsertQuery implements Query {
@@ -56,7 +59,10 @@ public class InsertQuery implements Query {
 
     @Override
     public PreparedStatement prepare(Connection con) throws SQLException {
-        PreparedStatement prep = con.prepareStatement(getQueryString());
-        return SQLUtil.prepDataTypes(prep, params);
+        String query = getQueryString();
+        PreparedStatement prep = con.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        prep = SQLUtil.prepDataTypes(prep, params);
+        FastLogger.logStatic(LogLevel.TRACE, "Prepared SQL INSERT query: \n" + query + "\n VALUES params: \n" + params);
+        return prep;
     }
 }

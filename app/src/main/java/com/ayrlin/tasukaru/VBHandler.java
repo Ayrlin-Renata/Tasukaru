@@ -167,6 +167,7 @@ public class VBHandler {
             String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
             log.debug("Attempting to connect to DB at: " + conPath);
             con = DriverManager.getConnection(conPath);
+            con.setAutoCommit(true);
             initialise();
         } catch (ClassNotFoundException e) {
             log.severe("couldnt find JDBC");
@@ -206,36 +207,53 @@ public class VBHandler {
         params.add(new Parameter(DataType.INT, "watchtime", vi.watchtime));
         params.add(new Parameter(DataType.INT, "tskrpoints", vi.tskrpoints));
 
-        if(!SQLUtil.insert(con, "viewers", params)) {
+        long key = SQLUtil.insert(con, "viewers", params);
+        if(key < 0) {
             log.severe("failed to add viewer: \n" + vi);
             return -1;
         } 
 
         //add snapshot after viewer for foreign key
-        addViewerSnapshot(vi.latestSnapshot(SQLUtil.retrieveLastInsertId(con)));
-        log.trace("added snapshot " + vi.latestSnapshot);
+        vi.id((int)key);
+        log.trace("added viewer id: " + vi.id);
 
-        //update new viewer entry to have latest snapshot id
-        List<Parameter> sParams = new ArrayList<>();
-        sParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
-        List<Parameter> wParams = new ArrayList<>();
-        wParams.add(new Parameter(DataType.INT, "id", vi.id));
+        // // //update new viewer entry to have latest snapshot id
+        // // List<Parameter> sParams = new ArrayList<>();
+        // // sParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
+        // // List<Parameter> wParams = new ArrayList<>();
+        // // wParams.add(new Parameter(DataType.INT, "id", vi.id));
 
-        if(!SQLUtil.update(con, "viewers", sParams, wParams)) {
+        // // if(!SQLUtil.update(con, "viewers", sParams, wParams)) {
+        // //     log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
+        // //     return -2;
+        // // } 
+
+        // // // try {
+        // // //     PreparedStatement ps = con.prepareStatement("UPDATE `viewers` SET \"latestSnapshot\" = ? WHERE \"id\" = ?;");
+        // // //     ps.setLong(vi.latestSnapshot);
+        // // //     ps.setLong(vi.id);
+        // // //     ps.close();
+        // // // } catch (SQLException e) {
+        // // //     // TODO Auto-generated catch block
+        // // //     e.printStackTrace();
+        // // // }
+
+        if(!updateViewer(vi)) { //will also handle snapshot
             log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
-            return -1;
-        } 
+            return -2;
+        }
 
         return vi.id;
     }
 
-    public void updateViewer(ViewerInfo vi) {
+    public boolean updateViewer(ViewerInfo vi) {
         if (con == null) {
             getConnection();
         }
         log.debug("Updating viewer info: " + vi);
         
         addViewerSnapshot(vi);
+        log.trace("Inserting new latestSnapshot into update: " + vi.latestSnapshot);
         
         List<Parameter> setParams = new ArrayList<>();
         setParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
@@ -260,10 +278,16 @@ public class VBHandler {
         
         if(!SQLUtil.update(con, "viewers", setParams, whereParams)) {
             log.severe("failed to update viewer: \n" + vi);
-            return;
+            return false;
         } 
+        return true;
     }
 
+    /**
+     * Creates a latestSnapshot and adds it to vi
+     * @param vi
+     * @return the snapshot id, equal to vi.latestSnapshot
+     */
     public int addViewerSnapshot(ViewerInfo vi) {
         if (con == null) {
             getConnection();
@@ -298,16 +322,17 @@ public class VBHandler {
         params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
         params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
 
-        if(!SQLUtil.insert(con, "vsnapshots", params)) {
+        long key = SQLUtil.insert(con, "vsnapshots", params);
+        if(key < 0) {
             log.severe("Failed to add viewer snapshot for viewer: \n" + vi);
             return -1;
         }
 
-        vi.latestSnapshot = SQLUtil.retrieveLastInsertId(con);
+        vi.latestSnapshot = (int)key;
 
         EventInfo ei = new EventInfo()
                 .viewer(vi)
-                .snapshotId(SQLUtil.retrieveLastInsertId(con))
+                .snapshotId(vi.latestSnapshot)
                 .uptype("technical")
                 .action("vsnapshot");
         addHistory(ei);
@@ -315,7 +340,7 @@ public class VBHandler {
         return vi.latestSnapshot;
     }
 
-    public void addHistory(EventInfo ei) {
+    public int addHistory(EventInfo ei) {
         if (con == null) {
             getConnection();
         }
@@ -333,9 +358,11 @@ public class VBHandler {
         params.add(new Parameter(DataType.STRING, "streamState", ei.streamState));
         params.add(new Parameter(DataType.TIMESTAMP, "timestamp", ei.timestamp));
 
-        if(!SQLUtil.insert(con, "history", params)) {
+        long key = SQLUtil.insert(con, "history", params);
+        if(key < 0) {
             log.severe("failed to addHistory() for event: \n" + ei);
         }
+        return (int)key;
     }
 
     /**
@@ -393,7 +420,7 @@ public class VBHandler {
             if (secondParam == 1)
                 prep.setString(2, param2);
             ResultSet res = prep.executeQuery();
-            if (!res.next()) {
+            if (!res.next() || res.getInt("id") <= 0 ) {
                 log.warn("unable to find viewer: \n" + vi);
                 return -1;
             }

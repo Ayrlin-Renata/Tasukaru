@@ -6,8 +6,8 @@ import java.sql.SQLException;
 
 public interface Query {
 
-    public String getQueryString();
     public boolean isReady();
+    public String getQueryString();
     
     public PreparedStatement prepare(Connection con) throws SQLException;
 }
