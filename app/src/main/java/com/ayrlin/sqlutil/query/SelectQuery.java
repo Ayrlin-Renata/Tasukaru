@@ -16,15 +16,26 @@ import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 public class SelectQuery implements Query {
     public List<Parameter> select; 
     public String from;
-    public List<Parameter> where; 
+    public List<Parameter> where;
+    public String selectString;
+    public String orderBy;
+    public boolean asc;
 
     public SelectQuery() {
         select = new ArrayList<Parameter>();
         where = new ArrayList<Parameter>();
+        selectString = "";
+        orderBy = "";
+        asc = true;
+    }
+
+    public SelectQuery select(String s) {
+        this.selectString = s;
+        return this;
     }
 
     public SelectQuery select(List<Parameter> cols) {
-        select.addAll(cols);
+        this.select.addAll(cols);
         return this;
     }
 
@@ -34,14 +45,29 @@ public class SelectQuery implements Query {
     }
 
     public SelectQuery where(List<Parameter> match) {
-        where.addAll(match);
+        this.where.addAll(match);
+        return this;
+    }
+
+    public SelectQuery orderBy(String sort) {
+        this.orderBy = sort;
+        return this;
+    }
+
+    public SelectQuery asc() {
+        this.asc = true;
+        return this;
+    }
+
+    public SelectQuery desc() {
+        this.asc = false;
         return this;
     }
 
     @Override
     public boolean isReady() {
         boolean built = true;
-        if(select.isEmpty()) { built = false; }
+        if(select.isEmpty() && selectString.isEmpty()) { built = false; }
         if(from.isEmpty()) { built = false; }
         //if(where.isEmpty()) { built = false; }
         return built;
@@ -49,14 +75,15 @@ public class SelectQuery implements Query {
     
     @Override
     public String getQueryString() {
-        List<String> selectList = new ArrayList<>();
-        for(Parameter p : select) {
-            selectList.add(p.getColumn());
+        if(selectString.isEmpty()) {
+            List<String> selectList = new ArrayList<>();
+            for(Parameter p : select) {
+                selectList.add(p.getColumn());
+            }
+            selectString = String.join(", ",selectList);
         }
-        String selectString = String.join(", ",selectList);
         
-        String qs = "SELECT " + selectString + " FROM " + from + "";
-
+        String qs = "SELECT " + selectString + " FROM " + from;
         if(!where.isEmpty()) { 
             List<String> whereList = new ArrayList<>();
             for(Parameter p : where) {
@@ -64,6 +91,9 @@ public class SelectQuery implements Query {
             }
             String whereString = String.join(" AND ",whereList);
             qs += " WHERE " + whereString;
+        }
+        if(!orderBy.isEmpty()) {
+            qs += " ORDER BY " + orderBy + (asc? " ASC" : " DESC");
         }
         return qs + ";";
     }

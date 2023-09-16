@@ -1,5 +1,9 @@
 package com.ayrlin.tasukaru;
 
+import java.util.List;
+
+import com.ayrlin.sqlutil.query.Parameter;
+
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TLogic {
@@ -39,8 +43,7 @@ public class TLogic {
         }
         if (viewerId >= 0) {
             if(!vb.verifyCurrentViewerInfo(ei.viewer)) {
-                // compare viewer info with current viewer table, make snapshot if different
-                // TODO viewer from table to VI, merge old VI as basis with new VI
+                ei.viewer.fillDefaults(vb.retrieveCurrentViewerInfo(ei.viewer.id));
                 vb.updateViewer(ei.viewer);
             } 
             ei.snapshotId = vb.findLatestSnapshot(ei.viewer.id);
@@ -54,6 +57,25 @@ public class TLogic {
         }
         // if failure to process actions, incoming failed
         return false;
+    }
+
+    public static void fillViewerTableHoles(FastLogger log, VBHandler vb) {
+        //find holes
+        List<Long> vids = vb.listAllViewers();
+        for (long vid : vids) {
+            log.trace("filling holes for viewer " + vid);
+            ViewerInfo vi = vb.retrieveCurrentViewerInfo(vid);
+            List<Parameter> missingList = vi.listUnfilledValues();
+            if(missingList.isEmpty()) continue;
+            for (Parameter p : missingList) {
+                Parameter sp = vb.findLastSnapshotValue(vi.id, p);
+                if(sp.value != null) {
+                    vi.modifyFromParameter(sp);
+                }
+            }
+            vb.updateViewer(vi);
+        }
+        log.debug("hole filling complete.");
     }
 
     private boolean processEventActions(EventInfo ei) {

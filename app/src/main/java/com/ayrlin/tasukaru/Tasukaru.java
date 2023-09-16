@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import co.casterlabs.caffeinated.pluginsdk.*;
+import co.casterlabs.commons.async.AsyncTask;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @CaffeinatedPluginImplementation
@@ -52,14 +53,26 @@ public class Tasukaru extends CaffeinatedPlugin {
         // listener init
         tlist = new TListener(log, tlogic);
         addKoiListener(tlist);
+
+        // maintenance thread
+        AsyncTask.createNonDaemon(() -> {
+            log.info("DB maintenance thread init");
+            VBHandler avb = new VBHandler(log, tDir + "/");
+            avb.run();
+            // TODO implement backups
+            TLogic.fillViewerTableHoles(log, avb);
+            //TLogic.refreshLatestSnapshots();
+        });
     }
 
     @Override
+    /**
+     * triggers when user unloads the plugin, NOT on application close
+     */
     public void onClose() {
         log.debug("Tasukaru onClose()");
 
-        // TODO implement backups
-        log.info("Goodbye World!");
+        log.info("Tasukaru is leaving bye!");
     }
 
     private String initPluginDir(String plugin) throws IOException {

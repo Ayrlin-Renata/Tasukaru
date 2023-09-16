@@ -17,6 +17,14 @@ import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 public class SQLUtil {
 
+    /**
+     * Remember to close() any ActiveResult
+     * @param con
+     * @param columns
+     * @param table
+     * @param matchConditions
+     * @return
+     */
     public static ActiveResult select(Connection con, List<Parameter> columns, String table, List<Parameter> matchConditions) {
         SelectQuery q = new SelectQuery().select(columns).from(table).where(matchConditions);
         return select(con, q);
@@ -51,30 +59,28 @@ public class SQLUtil {
             FastLogger.logStatic(LogLevel.SEVERE,"query is unexpectedly not ready: \n" + q);
             return -1;
         }
-        try {
-            PreparedStatement prep = q.prepare(con);
-            int matched = prep.executeUpdate();
-            int rows = prep.getUpdateCount(); 
-            long key = -1; 
-            ResultSet gk = prep.getGeneratedKeys();
+        int matched, rows;
+        long key;
+        try (PreparedStatement prep = q.prepare(con); ResultSet gk = prep.getGeneratedKeys()) {
+            matched = prep.executeUpdate();
+            rows = prep.getUpdateCount(); 
+            key = -1; 
             if(gk.next()) {
                 key = gk.getLong(1);
             }
-            gk.close();
-            prep.close();
-            FastLogger.logStatic(LogLevel.TRACE, "INSERT statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
-            if(matched <= 0) return -2; //successful insert returns matched 1 rows 0 for weird reasons
-            if(key < 0) {
-                int lid = retrieveLastInsertId(con);
-                if(lid < 0) return -3;
-                key = lid;
-            }
-            return key;
         } catch (SQLException e) {
             FastLogger.logStatic(LogLevel.SEVERE, "failed to execute SQL query: \n" + q.getQueryString());
             e.printStackTrace();
             return -1;
         }
+        FastLogger.logStatic(LogLevel.TRACE, "INSERT statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
+        if(matched <= 0) return -2; //successful insert returns matched 1 rows 0 for weird reasons
+        if(key < 0) {
+            int lid = retrieveLastInsertId(con);
+            if(lid < 0) return -3;
+            key = lid;
+        }
+        return key;
     }
 
     public static boolean update(Connection con, String table, List<Parameter> setValues, List<Parameter> matchConditions) {
@@ -87,19 +93,18 @@ public class SQLUtil {
             FastLogger.logStatic(LogLevel.SEVERE,"query is unexpectedly not ready: \n" + q);
             return false;
         }
-        try {
-            PreparedStatement prep = q.prepare(con);
-            int matched = prep.executeUpdate();
-            int rows = prep.getUpdateCount(); 
-            prep.close();
-            FastLogger.logStatic(LogLevel.TRACE, "UPDATE statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
-            if(matched <= 0) return false; //successful update returns matched 1 rows 0 for weird reasons
-            return true;
+        int matched, rows;
+        try (PreparedStatement prep = q.prepare(con);) {
+            matched = prep.executeUpdate();
+            rows = prep.getUpdateCount(); 
         } catch (SQLException e) {
             FastLogger.logStatic(LogLevel.SEVERE, "failed to execute SQL query: \n" + q.getQueryString());
             e.printStackTrace();
             return false;
         }
+        FastLogger.logStatic(LogLevel.TRACE, "UPDATE statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
+        if(matched <= 0) return false; //successful update returns matched 1 rows 0 for weird reasons
+        return true;
     }
 
     public static boolean sanityCheck(Connection con, String table, List<Parameter> matchConditions) {
@@ -112,10 +117,11 @@ public class SQLUtil {
                 return false;
             }
             FastLogger.logStatic(LogLevel.TRACE, "Sanity check query ResultSet.getString(1): \n" + ar.rs.getString(1));
-            ar.close();
         } catch(SQLException e) {
             FastLogger.logStatic(LogLevel.SEVERE, "SQLException during sanity check for query: \n" + q);
             return false;
+        } finally {
+            ar.close();
         }
         return true;
     }
@@ -149,6 +155,23 @@ public class SQLUtil {
             FastLogger.logStatic(LogLevel.TRACE, "Prepared Parameter " + i + ": " + p);
         }
         return prep;
+    }
+
+    /**
+     * Quick Param List
+     * just makes a list out of data for one param for shorthand
+     * @param type
+     * @param col
+     * @param value
+     * @return an ArrayList containing one param built as specified
+     */
+    public static List<Parameter> qpl(DataType type, String col, Object value) {
+        return qpl(new Parameter(type, col, value));
+    }
+    public static List<Parameter> qpl(Parameter p) {
+        List<Parameter> qpl = new ArrayList<>();
+        qpl.add(p);
+        return qpl;
     }
 
     /**

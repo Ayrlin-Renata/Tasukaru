@@ -4,8 +4,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
 import com.ayrlin.sqlutil.query.Parameter;
+import com.ayrlin.sqlutil.query.SelectQuery;
+
 import com.ayrlin.sqlutil.query.Parameter.DataType;
 
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -13,9 +16,9 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class VBHandler {
     public static final String vbVersion = "1.0.0";
 
-    private static Connection con;
     private static boolean initd = false;
-
+    
+    private Connection con;
     private FastLogger log;
     private String tDir;
 
@@ -161,9 +164,6 @@ public class VBHandler {
         // sqlite driver
         try {
             Class.forName("org.sqlite.JDBC");
-            // database path, if it's new database, it will be created in the project folder
-            // con =
-            // DriverManager.getConnection("jdbc:sqlite:../plugins/Tasukaru/ViewerBase.db");
             String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
             log.debug("Attempting to connect to DB at: " + conPath);
             con = DriverManager.getConnection(conPath);
@@ -173,7 +173,7 @@ public class VBHandler {
             log.severe("couldnt find JDBC");
             e.printStackTrace();
         } catch (SQLException e) {
-            log.severe("couldnt connect to the viewerbase DB");
+            log.warn("couldnt connect to the viewerbase DB");
             e.printStackTrace();
         }
     }
@@ -216,27 +216,6 @@ public class VBHandler {
         //add snapshot after viewer for foreign key
         vi.id((int)key);
         log.trace("added viewer id: " + vi.id);
-
-        // // //update new viewer entry to have latest snapshot id
-        // // List<Parameter> sParams = new ArrayList<>();
-        // // sParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
-        // // List<Parameter> wParams = new ArrayList<>();
-        // // wParams.add(new Parameter(DataType.INT, "id", vi.id));
-
-        // // if(!SQLUtil.update(con, "viewers", sParams, wParams)) {
-        // //     log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
-        // //     return -2;
-        // // } 
-
-        // // // try {
-        // // //     PreparedStatement ps = con.prepareStatement("UPDATE `viewers` SET \"latestSnapshot\" = ? WHERE \"id\" = ?;");
-        // // //     ps.setLong(vi.latestSnapshot);
-        // // //     ps.setLong(vi.id);
-        // // //     ps.close();
-        // // // } catch (SQLException e) {
-        // // //     // TODO Auto-generated catch block
-        // // //     e.printStackTrace();
-        // // // }
 
         if(!updateViewer(vi)) { //will also handle snapshot
             log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
@@ -376,111 +355,125 @@ public class VBHandler {
         }
         log.trace("searching for id of viewer: \n" + vi);
 
-        int viewerId;
-        String query = "SELECT `id` FROM `viewers` WHERE ";
-        String param1 = "";
-        String param2 = "";
-        byte secondParam = 0;
+        List<Parameter> whereList = new ArrayList<>();
 
         // determine most reliable info
         if (!vi.UPID.isEmpty()) {
-            query += "`UPID` == ?";
-            param1 = vi.UPID;
+            whereList.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
         } else if (!vi.platform.isEmpty()) {
-            query += "`platform` == ? AND ";
-            param1 = vi.platform;
-            secondParam++;
+            whereList.add(new Parameter(DataType.STRING, "platform", vi.platform));
             if (!vi.userId.isEmpty()) {
-                query += "`userId` == ?";
-                param2 = vi.userId;
+                whereList.add(new Parameter(DataType.STRING, "userId", vi.userId));
             } else if (!vi.username.isEmpty()) {
-                query = "`username` == ?";
-                param2 = vi.username;
+                whereList.add(new Parameter(DataType.STRING, "username", vi.username));
             } else if (!vi.link.isEmpty()) {
-                query = "`link` == ?";
-                param2 = vi.link;
+                whereList.add(new Parameter(DataType.STRING, "link", vi.link));
             } else if (!vi.displayname.isEmpty()) {
-                query = "`displayname` == ?";
-                param2 = vi.displayname;
+                whereList.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
             } else {
-                query = "ABORT SQL QUERY";
+                //abort
+                log.warn("abort finding viewer: \n" + vi);
+                return -2;
             }
         } else {
-            query = "ABORT SQL QUERY";
-        }
-
-        if (query == "ABORT SQL QUERY") {
             log.warn("abort finding viewer: \n" + vi);
             return -2;
         }
 
+        int viewerId;
+        SelectQuery sq = new SelectQuery()
+                .select("id")
+                .from("viewers")
+                .where(whereList);
+        ActiveResult ar = SQLUtil.select(con, sq);
         try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setString(1, param1);
-            if (secondParam == 1)
-                prep.setString(2, param2);
-            ResultSet res = prep.executeQuery();
-            if (!res.next() || res.getInt("id") <= 0 ) {
+            if (!ar.rs.next() || ar.rs.getInt("id") <= 0 ) {
                 log.warn("unable to find viewer: \n" + vi);
                 return -1;
             }
-            viewerId = res.getInt("id");
+            viewerId = ar.rs.getInt("id");
         } catch (SQLException e) {
-            log.severe("SQLException while finding viewer: \n" + vi + "\nusing SQL: \n" + query + "\n and parameter(s): "
-                    + param1 + ((secondParam == 1) ? " and " + param2 : ""));
+            log.severe("SQLException while finding viewer: " + vi);
             e.printStackTrace();
             return -2;
-        }
+        } finally { ar.close(); }
 
         vi.id(viewerId);
-        log.trace("found viewer id " + viewerId + " for viewer: \n" + vi);
+        log.debug("found viewer id " + viewerId + " for viewer: \n" + vi);
         return viewerId;
     }
 
-    public boolean verifyCurrentViewerInfo(ViewerInfo vi) {
+    public ViewerInfo retrieveCurrentViewerInfo(long id) {
         if (con == null) {
             getConnection();
         }
-        log.trace("verifying viewer info is current.");
+        log.debug("retrieving current viewer info.");
 
-        boolean isCurrent = true; 
-        String query = "SELECT * FROM viewers WHERE id == ?"; //TODO turn this into a sqlutil helper func
+        SelectQuery sq = new SelectQuery().select("*").from("viewers").where(SQLUtil.qpl(DataType.INT, "id", id));
+        ActiveResult ar = SQLUtil.select(con, sq);
+        ResultSet rs = ar.rs;
+        ViewerInfo ci = new ViewerInfo();
         try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setInt(1, vi.id);
-            ResultSet res = prep.executeQuery();
-            if (!res.next()) {
-                log.warn("unable to find viewer: \n" + vi);
-                return false;
+            if (!rs.next()) {
+                log.warn("unable to find viewer with id: \n" + id);
+                return null;
             }
 
-            //TODO change cases to ignore default or blank values
-            //no userId, diff userId means diff account
-            if(!res.getString("channelId").equals(vi.channelId)) { isCurrent = false; }
-            //no platform, diff platform and same id etc. means something is weirdchamp
-            if(!res.getString("roles").equals(vi.getRoles())) {
-                //if this breaks compare lists (unordered)
-                log.trace("query roles: \n" + res.getString("roles") + " are not similar to VI roles: \n" + vi.getRoles());
-            } 
-            if(!res.getString("badges").equals(vi.getBadges())) {
-                //if this breaks compare lists (unordered)
-                log.trace("query roles: \n" + res.getString("badges") + " are not similar to VI roles: \n" + vi.getBadges());
-            }
-            if(!res.getString("color").equals(vi.color)) { isCurrent = false; }
-            if(!res.getString("username").equals(vi.username)) { isCurrent = false; }
-            if(!res.getString("displayname").equals(vi.displayname)) { isCurrent = false; }
-            if(!res.getString("bio").equals(vi.bio)) { isCurrent = false; }
-            if(!res.getString("link").equals(vi.link)) { isCurrent = false; }
-            if(!res.getString("imageLink").equals(vi.imageLink)) { isCurrent = false; }
-            if(res.getInt("followersCount") != vi.followersCount) { isCurrent = false; }
-            if(res.getInt("subCount") != vi.subCount) { isCurrent = false; }
-            //no user data like watchtime/tskrpoints
-            
+            ci.id((int)rs.getLong("id"))
+                    .latestSnapshot((int)rs.getLong("latestSnapshot"))
+                    .userId(rs.getString("userId"))
+                    .channelId(rs.getString("channelId"))
+                    .platform(rs.getString("platform"))
+                    .upid(rs.getString("upid"))
+                    .roles(rs.getString("roles"))
+                    .badges(rs.getString("badges"))
+                    .color(rs.getString("color"))
+                    .username(rs.getString("username"))
+                    .displayname(rs.getString("displayname"))
+                    .bio(rs.getString("bio"))
+                    .link(rs.getString("link"))
+                    .imageLink(rs.getString("imageLink"))
+                    .followersCount(rs.getInt("followersCount"))
+                    .subCount(rs.getInt("subCount"))
+                    .watchtime(rs.getInt("watchtime"))
+                    .tskrpoints(rs.getInt("tskrpoints"));
         } catch (SQLException e) {
-            log.severe("SQLException while verifying viewer info: \n" + vi);
+            log.severe("SQLException while retrieving viewer info with id: \n" + id);
             e.printStackTrace();
+        } finally { ar.close(); }
+        return ci;
+    }
+
+    public boolean verifyCurrentViewerInfo(ViewerInfo vi) {
+        log.trace("verifying current viewer info for viewer: \n" + vi);
+        ViewerInfo ci = retrieveCurrentViewerInfo(vi.id);
+        boolean result = vi.similar(ci);
+        log.debug("viewer info is " + (result? "" : "not") + " current for viewer: \n" + vi + " with current info: \n" + ci);
+        return result;
+    }
+
+    public List<Long> listAllViewers() {
+        List<Long> ids = new ArrayList<>();
+        if (con == null) {
+            getConnection();
         }
-        return isCurrent;
+        log.trace("listing all viewers");
+
+        SelectQuery sq = new SelectQuery()
+                .select("id")
+                .from("viewers");
+        ActiveResult ar = SQLUtil.select(con, sq);
+        try {
+            while(ar.rs.next()) {
+                ids.add(ar.rs.getLong("id"));
+            }
+        } catch(SQLException e) {
+            log.severe("SQLException while selecting all viewer ids");
+            e.printStackTrace();
+        } finally { ar.close(); }
+
+        log.debug("all viewers list: " + ids);
+        return ids;
     }
 
     public int findLatestSnapshot(int vid) {
@@ -489,21 +482,74 @@ public class VBHandler {
         }
         log.trace("searching for id of latest snapshot for viewer with id: " + vid);
 
+        SelectQuery sq = new SelectQuery()
+                .select("latestSnapshot")
+                .from("viewers")
+                .where(SQLUtil.qpl(DataType.INT, "id", vid));
+
         int sid = -1;
-        String query = "SELECT latestSnapshot FROM `viewers` WHERE id = ?";
+        ActiveResult ar = SQLUtil.select(con, sq);
         try {
-            PreparedStatement prep = con.prepareStatement(query);
-            prep.setInt(1, vid);
-            ResultSet res = prep.executeQuery();
-            if (!res.next()) {
+            if (!ar.rs.next()) {
                 log.warn("unable to find viewer latestSnapshot for viewer with id: " + vid);
                 return -1;
             }
-            sid = res.getInt("latestSnapshot");
+            sid = ar.rs.getInt("latestSnapshot");
         } catch (SQLException e) {
             log.severe("SQLException while searching for viewer latest snapshot: " + vid);
             e.printStackTrace();
-        }
+        } finally { ar.close(); }
+
+        log.debug("id of latest snapshot is "+ sid + " for viewer with id " + vid);
         return sid;
+    }
+
+    public Parameter findLastSnapshotValue(int vid, Parameter toFind) {
+        if (con == null) {
+            getConnection();
+        }
+        log.trace("finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
+
+        Object value = null;
+        if(toFind.type == DataType.INT) value = ViewerInfo.INT_DEFAULT;
+        if(toFind.type == DataType.STRING) value = ViewerInfo.STRING_DEFAULT;
+
+        SelectQuery sq = new SelectQuery()
+                .select(SQLUtil.qpl(toFind))
+                .from("vsnapshots")
+                .where(SQLUtil.qpl(DataType.INT,"vid",vid))
+                .orderBy("id").desc();
+        ActiveResult ar = SQLUtil.select(con, sq);
+        try {
+            while(ar.rs.next()) {
+                if(toFind.type == DataType.INT) {
+                    long result = ar.rs.getLong(toFind.column);
+                    if(result == ViewerInfo.INT_DEFAULT) {
+                        continue;
+                    } else {
+                        value = result;
+                        break;
+                    }
+                } else if(toFind.type == DataType.STRING) {
+                    String result = ar.rs.getString(toFind.column);
+                    if(result == null || result.equals(ViewerInfo.STRING_DEFAULT)) {
+                        continue;
+                    } else {
+                        if(toFind.column == "roles") { //special case due to serialization, if this becomes regular need to add DataType.SERIALIZED
+                            if(result.equals("[]")) continue;
+                        }
+                        value = result;
+                        break;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.severe("SQLException while finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
+            e.printStackTrace();
+        } finally { ar.close(); }
+
+        Parameter result = new Parameter(toFind.type, toFind.column, value);
+        log.debug("last value of " + toFind + " for viewer " + vid + " in snapshot records: \n" + result);
+        return result;
     }
 }
