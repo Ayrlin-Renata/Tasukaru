@@ -16,9 +16,9 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class VBHandler {
     public static final String vbVersion = "1.0.0";
 
+    private static Connection con;
     private static boolean initd = false;
     
-    private Connection con;
     private FastLogger log;
     private String tDir;
 
@@ -30,8 +30,26 @@ public class VBHandler {
     public void run() {
         try {
             getConnection();
-        } catch (Exception e) {
+            initialise();
+        } catch (SQLException e) {
+            SQLUtil.SQLExHandle(e,"exception during run init");
+        }
+    }
+
+    private void getConnection() {
+        // sqlite driver
+        try {
+            Class.forName("org.sqlite.JDBC");
+            String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
+            log.debug("Attempting to connect to DB at: " + conPath);
+            con = DriverManager.getConnection(conPath);
+            con.setAutoCommit(true);
+        } catch (ClassNotFoundException e) {
+            log.severe("couldnt find JDBC");
             e.printStackTrace();
+        } catch (SQLException e) {
+            log.warn("couldnt connect to the viewerbase DB");
+            SQLUtil.SQLExHandle(e,"exception while connecting to DB");
         }
     }
 
@@ -54,7 +72,7 @@ public class VBHandler {
             if(!versionCheckResult.next()) {
                 log.severe("malformed meta table has no version");
             } else {
-                String readVersion = versionCheckResult.getString("version"); 
+                String readVersion = versionCheckResult.getString("property"); 
                 if(!readVersion.equals(vbVersion)) {
                     log.warn("Mismatched versions! Database reports as version " + readVersion + ", plugin version is " + vbVersion + "!");
                     //TODO update DB to current version, including backup
@@ -158,24 +176,6 @@ public class VBHandler {
                 + "FOREIGN KEY (vid) REFERENCES `viewers` (id)"
                 + "FOREIGN KEY (sid) REFERENCES `vsnapshots` (id)"
                 + ");");
-    }
-
-    private void getConnection() {
-        // sqlite driver
-        try {
-            Class.forName("org.sqlite.JDBC");
-            String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
-            log.debug("Attempting to connect to DB at: " + conPath);
-            con = DriverManager.getConnection(conPath);
-            con.setAutoCommit(true);
-            initialise();
-        } catch (ClassNotFoundException e) {
-            log.severe("couldnt find JDBC");
-            e.printStackTrace();
-        } catch (SQLException e) {
-            log.warn("couldnt connect to the viewerbase DB");
-            e.printStackTrace();
-        }
     }
 
     ///////////////// VB ACTIONS //////////////////
@@ -393,8 +393,7 @@ public class VBHandler {
             }
             viewerId = ar.rs.getInt("id");
         } catch (SQLException e) {
-            log.severe("SQLException while finding viewer: " + vi);
-            e.printStackTrace();
+            SQLUtil.SQLExHandle(e,"SQLException while finding viewer: " + vi);
             return -2;
         } finally { ar.close(); }
 
@@ -407,7 +406,7 @@ public class VBHandler {
         if (con == null) {
             getConnection();
         }
-        log.debug("retrieving current viewer info.");
+        log.trace("retrieving current viewer info.");
 
         SelectQuery sq = new SelectQuery().select("*").from("viewers").where(SQLUtil.qpl(DataType.INT, "id", id));
         ActiveResult ar = SQLUtil.select(con, sq);
@@ -433,14 +432,14 @@ public class VBHandler {
                     .bio(rs.getString("bio"))
                     .link(rs.getString("link"))
                     .imageLink(rs.getString("imageLink"))
-                    .followersCount(rs.getInt("followersCount"))
-                    .subCount(rs.getInt("subCount"))
-                    .watchtime(rs.getInt("watchtime"))
-                    .tskrpoints(rs.getInt("tskrpoints"));
+                    .followersCount((int)rs.getLong("followersCount"))
+                    .subCount((int)rs.getLong("subCount"))
+                    .watchtime((int)rs.getLong("watchtime"))
+                    .tskrpoints((int)rs.getLong("tskrpoints"));
         } catch (SQLException e) {
-            log.severe("SQLException while retrieving viewer info with id: \n" + id);
-            e.printStackTrace();
+            SQLUtil.SQLExHandle(e,"SQLException while retrieving viewer info with id: \n" + id);
         } finally { ar.close(); }
+        log.debug("retrieved current viewer info: \n" + ci);
         return ci;
     }
 
@@ -468,8 +467,7 @@ public class VBHandler {
                 ids.add(ar.rs.getLong("id"));
             }
         } catch(SQLException e) {
-            log.severe("SQLException while selecting all viewer ids");
-            e.printStackTrace();
+            SQLUtil.SQLExHandle(e,"SQLException while selecting all viewer ids");
         } finally { ar.close(); }
 
         log.debug("all viewers list: " + ids);
@@ -496,8 +494,7 @@ public class VBHandler {
             }
             sid = ar.rs.getInt("latestSnapshot");
         } catch (SQLException e) {
-            log.severe("SQLException while searching for viewer latest snapshot: " + vid);
-            e.printStackTrace();
+            SQLUtil.SQLExHandle(e,"SQLException while searching for viewer latest snapshot: " + vid);
         } finally { ar.close(); }
 
         log.debug("id of latest snapshot is "+ sid + " for viewer with id " + vid);
@@ -532,11 +529,14 @@ public class VBHandler {
                     }
                 } else if(toFind.type == DataType.STRING) {
                     String result = ar.rs.getString(toFind.column);
+                    log.debug("lastValue contender: ", result);
                     if(result == null || result.equals(ViewerInfo.STRING_DEFAULT)) {
                         continue;
                     } else {
                         if(toFind.column == "roles") { //special case due to serialization, if this becomes regular need to add DataType.SERIALIZED
                             if(result.equals("[]")) continue;
+                        } else if(toFind.column == "channelId") { //special case due to for some reason API returning int values
+                            if(result.equals(String.valueOf(ViewerInfo.INT_DEFAULT))) continue;
                         }
                         value = result;
                         break;
@@ -544,8 +544,7 @@ public class VBHandler {
                 }
             }
         } catch (SQLException e) {
-            log.severe("SQLException while finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
-            e.printStackTrace();
+            SQLUtil.SQLExHandle(e, "SQLException while finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
         } finally { ar.close(); }
 
         Parameter result = new Parameter(toFind.type, toFind.column, value);

@@ -40,8 +40,7 @@ public class SQLUtil {
             FastLogger.logStatic(LogLevel.TRACE, "SELECT statement executed.");
             return new ActiveResult(con, prep, res);
         } catch (SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE, "failed to execute SQL query: \n" + q.getQueryString());
-            e.printStackTrace();
+            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
             return null;
         }
     }
@@ -61,19 +60,24 @@ public class SQLUtil {
         }
         int matched, rows;
         long key;
-        try (PreparedStatement prep = q.prepare(con); ResultSet gk = prep.getGeneratedKeys()) {
+        try (PreparedStatement prep = q.prepare(con)) {
             matched = prep.executeUpdate();
             rows = prep.getUpdateCount(); 
-            key = -1; 
-            if(gk.next()) {
-                key = gk.getLong(1);
+            try (ResultSet gk = prep.getGeneratedKeys()) {
+                key = -1; 
+                if(gk.next()) {
+                    key = gk.getLong(1);
+                }
+            } catch (SQLException e) {
+                SQLExHandle(e, "failed to retrieve generated keys SQL query: \n" + q.getQueryString());
+                return -1;
             }
         } catch (SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE, "failed to execute SQL query: \n" + q.getQueryString());
-            e.printStackTrace();
+            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
             return -1;
         }
-        FastLogger.logStatic(LogLevel.TRACE, "INSERT statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
+        
+        FastLogger.logStatic(LogLevel.DEBUG, "INSERT statement (key " + key + ") executed, matching " + matched + " rows and impacting " + rows + " rows.");
         if(matched <= 0) return -2; //successful insert returns matched 1 rows 0 for weird reasons
         if(key < 0) {
             int lid = retrieveLastInsertId(con);
@@ -98,8 +102,7 @@ public class SQLUtil {
             matched = prep.executeUpdate();
             rows = prep.getUpdateCount(); 
         } catch (SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE, "failed to execute SQL query: \n" + q.getQueryString());
-            e.printStackTrace();
+            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
             return false;
         }
         FastLogger.logStatic(LogLevel.TRACE, "UPDATE statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
@@ -118,7 +121,7 @@ public class SQLUtil {
             }
             FastLogger.logStatic(LogLevel.TRACE, "Sanity check query ResultSet.getString(1): \n" + ar.rs.getString(1));
         } catch(SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE, "SQLException during sanity check for query: \n" + q);
+            SQLExHandle(e, "SQLException during sanity check for query: \n" + q);
             return false;
         } finally {
             ar.close();
@@ -187,7 +190,7 @@ public class SQLUtil {
             lid = prep.executeQuery().getInt("last_insert_rowid()");
             prep.close();
         } catch (SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE,"SQLException while retrieving last insert ID.");
+            SQLExHandle(e, "SQLException while retrieving last insert ID.");
             return -1;
         }
         FastLogger.logStatic(LogLevel.TRACE,"Last Insert ID Retrieved: " + lid);
@@ -210,7 +213,7 @@ public class SQLUtil {
             }
             ar.close();
         } catch(SQLException e) {
-            FastLogger.logStatic(LogLevel.SEVERE,"SQLException while retrieving column names for table: " + table);
+            SQLExHandle(e, "SQLException while retrieving column names for table: " + table);
             return null;
         }
         if(cols.isEmpty()) {
@@ -218,5 +221,18 @@ public class SQLUtil {
         }
         FastLogger.logStatic(LogLevel.TRACE, "column names for table " + table + ": \n" + cols);
         return cols;
+    }
+
+    /**
+     * logs more verbose error details
+     * @param e
+     * @param string
+     */
+    public static void SQLExHandle(SQLException e, String errormessage) {
+        FastLogger.logStatic(LogLevel.SEVERE, errormessage);
+        FastLogger.logStatic(LogLevel.SEVERE, "SQLState: " + e.getSQLState());
+        FastLogger.logStatic(LogLevel.SEVERE, "Error Code: " + e.getErrorCode());
+        FastLogger.logStatic(LogLevel.SEVERE, "Error Message: " + e.getLocalizedMessage());
+        e.printStackTrace();
     }
 }

@@ -55,13 +55,20 @@ public class Tasukaru extends CaffeinatedPlugin {
         addKoiListener(tlist);
 
         // maintenance thread
+        
         AsyncTask.createNonDaemon(() -> {
-            log.info("DB maintenance thread init");
-            VBHandler avb = new VBHandler(log, tDir + "/");
-            avb.run();
-            // TODO implement backups
-            TLogic.fillViewerTableHoles(log, avb);
-            //TLogic.refreshLatestSnapshots();
+            try {
+                log.info("DB maintenance thread init");
+                // TODO implement backups
+                TLogic.fillViewerTableHoles(log, vb);
+                //TLogic.refreshLatestSnapshots();
+            } catch(Exception e) {
+                log.severe("Exception running async thread!\n" + e.getMessage());
+                log.severe(e.getStackTrace());
+            } catch(Throwable t) {
+                log.severe("Throwable thrown running async thread!\n" + t.getMessage());
+                log.severe(t.getStackTrace());
+            }
         });
     }
 

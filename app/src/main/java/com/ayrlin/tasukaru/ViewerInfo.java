@@ -278,7 +278,7 @@ public class ViewerInfo {
         if(id == DEFAULT_id) params.add(new Parameter(DataType.INT, "id", DEFAULT_id));
         if(latestSnapshot == DEFAULT_latestSnapshot) params.add(new Parameter(DataType.INT, "latestSnapshot", DEFAULT_latestSnapshot));
         if(userId.equals(DEFAULT_userId)) params.add(new Parameter(DataType.STRING, "userId", DEFAULT_userId));
-        if(channelId.equals(DEFAULT_channelId)) params.add(new Parameter(DataType.STRING, "channelId", DEFAULT_channelId));
+        if(channelId.equals(DEFAULT_channelId) || channelId.equals(String.valueOf(INT_DEFAULT))) params.add(new Parameter(DataType.STRING, "channelId", DEFAULT_channelId));
         if(platform.equals(DEFAULT_platform)) params.add(new Parameter(DataType.STRING, "platform", DEFAULT_platform));
         if(UPID.equals(DEFAULT_UPID)) params.add(new Parameter(DataType.STRING, "UPID", DEFAULT_UPID));
         if(roles.equals(DEFAULT_roles)) params.add(new Parameter(DataType.STRING, "roles", DEFAULT_roles));
@@ -301,7 +301,7 @@ public class ViewerInfo {
     public void modifyFromParameter(Parameter sp) {
         FastLogger.logStatic(LogLevel.TRACE, "Modifying by parameter " + sp + " for viewer " + id);
         if(sp.type == DataType.INT) {
-            long value = (long) sp.value;
+            long value = Long.parseLong(String.valueOf(sp.value));
             switch(sp.column) {
                 case "id" : id((int) value); break;
                 case "latestSnapshot" : latestSnapshot((int) value); break;
