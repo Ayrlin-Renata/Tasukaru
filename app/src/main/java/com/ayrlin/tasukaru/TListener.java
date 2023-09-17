@@ -35,8 +35,8 @@ public class TListener implements KoiEventListener {
     public void onViewerJoin(ViewerJoinEvent e) {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
-        ViewerInfo tskrViewerData = new ViewerInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("present").action("join");
+        AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
+        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype("present").action("join");
         tl.incoming(histEvent);
     }
 
@@ -44,8 +44,8 @@ public class TListener implements KoiEventListener {
     public void onViewerLeave(ViewerLeaveEvent e) {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
         log.trace(e);
-        ViewerInfo tskrViewerData = new ViewerInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo().viewer(tskrViewerData).uptype("absent").action("leave");
+        AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
+        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype("absent").action("leave");
         tl.incoming(histEvent);
     }
 
@@ -61,9 +61,9 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved RichMessageEvent.");
         log.trace(e);
 
-        ViewerInfo tskrViewerData = new ViewerInfo(e.getSender());
+        AccountInfo tskrViewerData = new AccountInfo(e.getSender());
         EventInfo histEvent = new EventInfo()
-                .viewer(tskrViewerData)
+                .account(tskrViewerData)
                 .uptype("present")
                 .streamState((koi.getStreamStates().get(e.getSender().getPlatform()).isLive())? "live" : "offline"); //is the stream live rn
         if (e.getDonations().isEmpty()) {
@@ -80,9 +80,9 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved FollowEvent.");
         log.trace(e);
 
-        ViewerInfo tskrViewerData = new ViewerInfo(e.getFollower());
+        AccountInfo tskrViewerData = new AccountInfo(e.getFollower());
         EventInfo histEvent = new EventInfo()
-                .viewer(tskrViewerData)
+                .account(tskrViewerData)
                 .uptype("present")
                 .action("follow");
         tl.incoming(histEvent);
@@ -93,9 +93,9 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved SubscriptionEvent.");
         log.trace(e);
 
-        ViewerInfo tskrViewerData = new ViewerInfo(e.getSubscriber());
+        AccountInfo tskrViewerData = new AccountInfo(e.getSubscriber());
         EventInfo histEvent = new EventInfo()
-                .viewer(tskrViewerData)
+                .account(tskrViewerData)
                 .uptype("present")
                 .action("subscribe");
         tl.incoming(histEvent);

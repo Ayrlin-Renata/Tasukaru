@@ -16,37 +16,37 @@ public class TLogic {
     }
 
     public boolean incoming(EventInfo ei) {
-        log.debug("processing " + ei.uptype + " event for " + ei.action + " of " + ei.viewer.displayname);
+        log.debug("processing " + ei.uptype + " event for " + ei.action + " of " + ei.account.displayname);
         log.trace(ei);
 
         // find or add viewer
-        int viewerId = vb.findViewerId(ei.viewer);
-        if (viewerId == -2) {
+        int accountId = vb.findAccountId(ei.account);
+        if (accountId == -2) {
             log.severe("aborting incoming event: error finding viewer id for event: \n" + ei);
             return false;
-        } else if (viewerId == -1) {
-            viewerId = vb.addViewer(ei.viewer);
-            if(viewerId < 0) {
-                if(viewerId == -1) {
+        } else if (accountId == -1) {
+            accountId = vb.addAccount(ei.account);
+            if(accountId < 0) {
+                if(accountId == -1) {
                     //sqlerror
                     log.severe("error adding viewer, aborting incoming event: \n" + ei);
                     return false;
                 }
-                if(viewerId == -2) {
+                if(accountId == -2) {
                     //no latestSnapshot update for unexpected reasons
-                    if(!vb.updateViewer(ei.viewer)) {
+                    if(!vb.updateAccount(ei.account)) {
                         //failed retry
                         log.warn("added viewer missing latestSnapshot, silently continuing incoming event: \n" + ei);
                     }
                 }
             }
         }
-        if (viewerId >= 0) {
-            if(!vb.verifyCurrentViewerInfo(ei.viewer)) {
-                ei.viewer.fillDefaults(vb.retrieveCurrentViewerInfo(ei.viewer.id));
-                vb.updateViewer(ei.viewer);
+        if (accountId >= 0) {
+            if(!vb.verifyCurrentAccountInfo(ei.account)) {
+                ei.account.fillDefaults(vb.retrieveCurrentAccountInfo(ei.account.id));
+                vb.updateAccount(ei.account);
             } 
-            ei.snapshotId = vb.findLatestSnapshot(ei.viewer.id);
+            ei.snapshotId = vb.findLatestSnapshot(ei.account.id);
         }
 
         // follow through with event actions
@@ -59,12 +59,12 @@ public class TLogic {
         return false;
     }
 
-    public static void fillViewerTableHoles(FastLogger log, VBHandler vb) {
+    public static void fillAccountTableHoles(FastLogger log, VBHandler vb) {
         //find holes
-        List<Long> vids = vb.listAllViewers();
-        for (long vid : vids) {
-            log.trace("filling holes for viewer " + vid);
-            ViewerInfo vi = vb.retrieveCurrentViewerInfo(vid);
+        List<Long> aids = vb.listAllAccounts();
+        for (long aid : aids) {
+            log.trace("filling holes for viewer " + aid);
+            AccountInfo vi = vb.retrieveCurrentAccountInfo(aid);
             List<Parameter> missingList = vi.listUnfilledValues();
             if(missingList.isEmpty()) continue;
             for (Parameter p : missingList) {
@@ -73,7 +73,7 @@ public class TLogic {
                     vi.modifyFromParameter(sp);
                 }
             }
-            vb.updateViewer(vi);
+            vb.updateAccount(vi);
         }
         log.debug("hole filling complete.");
     }

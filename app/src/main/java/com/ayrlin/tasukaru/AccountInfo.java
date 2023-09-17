@@ -17,7 +17,7 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @ToString
-public class ViewerInfo {
+public class AccountInfo {
     public static final int INT_DEFAULT = -1;
     public static final String STRING_DEFAULT = "";
 
@@ -37,8 +37,6 @@ public class ViewerInfo {
     private static final String DEFAULT_imageLink = STRING_DEFAULT;
     private static final long DEFAULT_followersCount = INT_DEFAULT;
     private static final long DEFAULT_subCount = INT_DEFAULT;
-    private static final long DEFAULT_watchtime = INT_DEFAULT;
-    private static final long DEFAULT_tskrpoints = INT_DEFAULT;
 
     public int id; // actual SQL table id
     public int latestSnapshot;
@@ -56,10 +54,8 @@ public class ViewerInfo {
     public String imageLink;
     public long followersCount;
     public long subCount;
-    public long watchtime;
-    public long tskrpoints;
 
-    public ViewerInfo() {
+    public AccountInfo() {
         this.id = DEFAULT_id;
         this.latestSnapshot = DEFAULT_latestSnapshot;
         this.userId = DEFAULT_userId;
@@ -76,11 +72,9 @@ public class ViewerInfo {
         this.imageLink = DEFAULT_imageLink;
         this.followersCount = DEFAULT_followersCount;
         this.subCount = DEFAULT_subCount;
-        this.watchtime = DEFAULT_watchtime;
-        this.tskrpoints = DEFAULT_tskrpoints;
     }
 
-    public ViewerInfo(User user) {
+    public AccountInfo(User user) {
         this();
         this.userId = user.getId();
         this.channelId = user.getChannelId();
@@ -99,38 +93,38 @@ public class ViewerInfo {
         this.subCount = user.getSubCount();
     }
 
-    public ViewerInfo id(int id) {
+    public AccountInfo id(int id) {
         this.id = id;
         return this;
     }
 
-    public ViewerInfo latestSnapshot(int latestSnapshot) {
+    public AccountInfo latestSnapshot(int latestSnapshot) {
         this.latestSnapshot = latestSnapshot;
         return this;
     } 
 
-    public ViewerInfo userId(String userId) {
+    public AccountInfo userId(String userId) {
         this.userId = userId;
         return this;
     }
 
-    public ViewerInfo channelId(String channelId) {
+    public AccountInfo channelId(String channelId) {
         this.channelId = channelId;
         return this;
     }
 
-    public ViewerInfo platform(String platformname) {
+    public AccountInfo platform(String platformname) {
         this.platform = platformname;
         return this;
     }
 
-    public ViewerInfo upid(String upid) {
+    public AccountInfo upid(String upid) {
         this.UPID = upid;
         return this;
     }
 
     // comma delimited pls
-    public ViewerInfo roles(String roles) {
+    public AccountInfo roles(String roles) {
         if(roles.isEmpty()) roles = "[]";
         List<UserRoles> ur = null;
         try {
@@ -142,7 +136,7 @@ public class ViewerInfo {
         return roles(ur);
     }
 
-    public ViewerInfo roles(List<UserRoles> roles) {
+    public AccountInfo roles(List<UserRoles> roles) {
         if(roles == null) {
             FastLogger.logStatic(LogLevel.WARNING, "VI was passed null roles, silently continuing.");
             return this;
@@ -152,62 +146,52 @@ public class ViewerInfo {
     }
 
     // comma delimited pls
-    public ViewerInfo badges(String badges) {
+    public AccountInfo badges(String badges) {
         return badges(Arrays.asList(badges.split(",", -1)));
     }
 
-    public ViewerInfo badges(List<String> badges) {
+    public AccountInfo badges(List<String> badges) {
         this.badges = badges;
         return this;
     }
 
-    public ViewerInfo color(String color) {
+    public AccountInfo color(String color) {
         this.color = color;
         return this;
     }
 
-    public ViewerInfo username(String username) {
+    public AccountInfo username(String username) {
         this.username = username;
         return this;
     }
 
-    public ViewerInfo displayname(String displayname) {
+    public AccountInfo displayname(String displayname) {
         this.displayname = displayname;
         return this;
     }
 
-    public ViewerInfo bio(String bio) {
+    public AccountInfo bio(String bio) {
         this.bio = bio;
         return this;
     }
 
-    public ViewerInfo link(String link) {
+    public AccountInfo link(String link) {
         this.link = link;
         return this;
     }
 
-    public ViewerInfo imageLink(String imageLink) {
+    public AccountInfo imageLink(String imageLink) {
         this.imageLink = imageLink;
         return this;
     }
 
-    public ViewerInfo followersCount(long followersCount) {
+    public AccountInfo followersCount(long followersCount) {
         this.followersCount = followersCount;
         return this;
     }
 
-    public ViewerInfo subCount(long subCount) {
+    public AccountInfo subCount(long subCount) {
         this.subCount = subCount;
-        return this;
-    }
-
-    public ViewerInfo watchtime(long watchtime) {
-        this.watchtime = watchtime;
-        return this;
-    }
-
-    public ViewerInfo tskrpoints(long tskrpoints) {
-        this.tskrpoints = tskrpoints;
         return this;
     }
 
@@ -224,7 +208,7 @@ public class ViewerInfo {
      * @param base
      * @return this
      */
-    public ViewerInfo fillDefaults(ViewerInfo base) {
+    public AccountInfo fillDefaults(AccountInfo base) {
         if(this.id == DEFAULT_id) this.id = base.id;
         if(this.latestSnapshot == DEFAULT_latestSnapshot) this.latestSnapshot = base.latestSnapshot;
         if(this.userId.isEmpty()) this.userId = base.userId;
@@ -250,7 +234,7 @@ public class ViewerInfo {
      * @param other
      * @return
      */
-    public boolean similar(ViewerInfo other) {
+    public boolean similar(AccountInfo other) {
         boolean similar = true;
         if((this.id != other.id && this.id != DEFAULT_id && other.id != DEFAULT_id)
                 || (this.latestSnapshot != other.latestSnapshot && this.latestSnapshot != DEFAULT_latestSnapshot && other.latestSnapshot != DEFAULT_latestSnapshot)
@@ -291,8 +275,6 @@ public class ViewerInfo {
         if(imageLink.equals(DEFAULT_imageLink)) params.add(new Parameter(DataType.STRING, "imageLink", DEFAULT_imageLink));
         if(followersCount == DEFAULT_followersCount) params.add(new Parameter(DataType.INT, "followersCount", DEFAULT_followersCount));
         if(subCount == DEFAULT_subCount) params.add(new Parameter(DataType.INT, "subCount", DEFAULT_subCount));
-        if(watchtime == DEFAULT_watchtime) params.add(new Parameter(DataType.INT, "watchtime", DEFAULT_watchtime));
-        if(tskrpoints == DEFAULT_tskrpoints) params.add(new Parameter(DataType.INT, "tskrpoints", DEFAULT_tskrpoints));
 
         FastLogger.logStatic(LogLevel.TRACE, "unfilled values for viewer " + id + ": \n" + params);
         return params;
@@ -307,8 +289,6 @@ public class ViewerInfo {
                 case "latestSnapshot" : latestSnapshot((int) value); break;
                 case "followersCount" : followersCount((int) value); break;
                 case "subCount" : subCount((int) value); break;
-                case "watchtime" : watchtime((int) value); break;
-                case "tskrpoints" : tskrpoints((int) value); break;
                 default:
                     FastLogger.logStatic(LogLevel.SEVERE, "unknown INT column " + sp.column + " while modifying VI: " + this);
             }

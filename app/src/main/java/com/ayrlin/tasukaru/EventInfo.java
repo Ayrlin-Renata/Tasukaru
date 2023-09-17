@@ -8,7 +8,7 @@ import lombok.ToString;
 public class EventInfo {
 
     public Timestamp timestamp;
-    public ViewerInfo viewer;
+    public AccountInfo account;
     public int snapshotId;
     public String uptype;
     public String action;
@@ -28,8 +28,8 @@ public class EventInfo {
         this(new java.sql.Timestamp(new java.util.Date().getTime()));
     }
 
-    public EventInfo viewer(ViewerInfo viewer) {
-        this.viewer = viewer;
+    public EventInfo account(AccountInfo viewer) {
+        this.account = viewer;
         return this;
     }
 

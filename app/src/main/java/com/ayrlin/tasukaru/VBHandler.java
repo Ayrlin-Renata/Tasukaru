@@ -79,20 +79,20 @@ public class VBHandler {
                 }
             }
 
-            // VIEWER SNAPSHOT
+            // ACCOUNT SNAPSHOT
             if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "vsnapshots" + checkSQLEnd)
+                    .executeQuery(checkSQLBegin + "snapshots" + checkSQLEnd)
                     .next()) {
-                log.warn("No Viewer Snapshot table found, creating new Viewer Snapshot table.");
-                createViewerSnapshotTable();
+                log.warn("No Account Snapshot table found, creating new Account Snapshot table.");
+                createSnapshotTable();
             }
 
-            // VIEWERS
+            // ACCOUNTS
             if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "viewers" + checkSQLEnd)
+                    .executeQuery(checkSQLBegin + "accounts" + checkSQLEnd)
                     .next()) {
-                log.warn("No Viewer table found, creating new Viewer table.");
-                createViewerTable();
+                log.warn("No Accounts table found, creating new Accounts table.");
+                createAccountTable();
             }
 
             // HISTORY
@@ -114,11 +114,11 @@ public class VBHandler {
         con.createStatement().executeUpdate("insert into meta values(\"version\",\"" + vbVersion + "\");");
     }
 
-    private void createViewerSnapshotTable() throws SQLException {
-        // vsnapshots table definition
-        con.createStatement().executeUpdate("CREATE TABLE `vsnapshots` ("
+    private void createSnapshotTable() throws SQLException {
+        // snapshots table definition
+        con.createStatement().executeUpdate("CREATE TABLE `snapshots` ("
                 + "id INTEGER PRIMARY KEY,"
-                + "vid INTEGER NOT NULL,"
+                + "aid INTEGER NOT NULL,"
                 + "userId TEXT," // koi.api.types.user.User.id
                 + "channelId TEXT,"
                 + "platform TEXT," // koi.api.types.user.User.platform.name
@@ -133,13 +133,13 @@ public class VBHandler {
                 + "imageLink TEXT,"
                 + "followersCount INTEGER,"
                 + "subCount INTEGER,"
-                + "FOREIGN KEY (vid) REFERENCES `viewers` (id)"
+                + "FOREIGN KEY (aid) REFERENCES `accounts` (id)"
                 + ");");
     }
 
-    private void createViewerTable() throws SQLException {
-        // viewers table definition
-        con.createStatement().executeUpdate("CREATE TABLE `viewers` (" 
+    private void createAccountTable() throws SQLException {
+        // accounts table definition
+        con.createStatement().executeUpdate("CREATE TABLE `accounts` (" 
                 + "id INTEGER PRIMARY KEY,"
                 + "latestSnapshot INTEGER,"
                 + "userId TEXT," // koi.api.types.user.User.id
@@ -156,9 +156,7 @@ public class VBHandler {
                 + "imageLink TEXT,"
                 + "followersCount INTEGER,"
                 + "subCount INTEGER,"
-                + "watchtime INTEGER," // in seconds, would take ~130 years to go over 32 bit
-                + "tskrpoints INTEGER,"
-                + "FOREIGN KEY (latestSnapshot) REFERENCES `vsnapshots` (id)"
+                + "FOREIGN KEY (latestSnapshot) REFERENCES `snapshots` (id)"
                 + ");");
     }
 
@@ -166,25 +164,25 @@ public class VBHandler {
         // history table definition
         con.createStatement().executeUpdate("CREATE TABLE `history` ("
                 + "id INTEGER PRIMARY KEY,"
-                + "vid INTEGER NOT NULL," // foreign key viewers
-                + "sid INTEGER NOT NULL," // foreign key vsnapshots
+                + "aid INTEGER NOT NULL," // foreign key accounts
+                + "sid INTEGER NOT NULL," // foreign key snapshots
                 + "uptype TEXT NOT NULL," // present, absent, technical
                 + "action TEXT,"
                 + "value INTEGER,"
                 + "timestamp TEXT,"
                 + "streamstate TEXT,"
-                + "FOREIGN KEY (vid) REFERENCES `viewers` (id)"
-                + "FOREIGN KEY (sid) REFERENCES `vsnapshots` (id)"
+                + "FOREIGN KEY (aid) REFERENCES `accounts` (id)"
+                + "FOREIGN KEY (sid) REFERENCES `snapshots` (id)"
                 + ");");
     }
 
     ///////////////// VB ACTIONS //////////////////
 
-    public int addViewer(ViewerInfo vi) {
+    public int addAccount(AccountInfo vi) {
         if (con == null) {
             getConnection();
         }
-        log.debug("Adding viewer: \n" + vi);
+        log.debug("Adding Account: \n" + vi);
 
         List<Parameter> params = new ArrayList<>();
         params.add(new Parameter(DataType.INT, "latestSnapshot", -1)); //default
@@ -204,34 +202,31 @@ public class VBHandler {
         params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
         params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
 
-        params.add(new Parameter(DataType.INT, "watchtime", vi.watchtime));
-        params.add(new Parameter(DataType.INT, "tskrpoints", vi.tskrpoints));
-
-        long key = SQLUtil.insert(con, "viewers", params);
+        long key = SQLUtil.insert(con, "accounts", params);
         if(key < 0) {
-            log.severe("failed to add viewer: \n" + vi);
+            log.severe("failed to add Account: \n" + vi);
             return -1;
         } 
 
-        //add snapshot after viewer for foreign key
+        //add snapshot after Account for foreign key
         vi.id((int)key);
-        log.trace("added viewer id: " + vi.id);
+        log.trace("added Account id: " + vi.id);
 
-        if(!updateViewer(vi)) { //will also handle snapshot
-            log.severe("failed to update viewer latestSnapshot while adding viewer: \n" + vi);
+        if(!updateAccount(vi)) { //will also handle snapshot
+            log.severe("failed to update Account latestSnapshot while adding Account: \n" + vi);
             return -2;
         }
 
         return vi.id;
     }
 
-    public boolean updateViewer(ViewerInfo vi) {
+    public boolean updateAccount(AccountInfo vi) {
         if (con == null) {
             getConnection();
         }
-        log.debug("Updating viewer info: " + vi);
+        log.debug("Updating Account info: " + vi);
         
-        addViewerSnapshot(vi);
+        addSnapshot(vi);
         log.trace("Inserting new latestSnapshot into update: " + vi.latestSnapshot);
         
         List<Parameter> setParams = new ArrayList<>();
@@ -255,8 +250,8 @@ public class VBHandler {
         List<Parameter> whereParams = new ArrayList<>();
         whereParams.add(new Parameter(DataType.INT, "id", vi.id));
         
-        if(!SQLUtil.update(con, "viewers", setParams, whereParams)) {
-            log.severe("failed to update viewer: \n" + vi);
+        if(!SQLUtil.update(con, "accounts", setParams, whereParams)) {
+            log.severe("failed to update Account: \n" + vi);
             return false;
         } 
         return true;
@@ -267,24 +262,24 @@ public class VBHandler {
      * @param vi
      * @return the snapshot id, equal to vi.latestSnapshot
      */
-    public int addViewerSnapshot(ViewerInfo vi) {
+    public int addSnapshot(AccountInfo vi) {
         if (con == null) {
             getConnection();
         }
-        log.debug("Adding viewer snapshot for viewer: \n" + vi);
+        log.debug("Adding account snapshot for Account: \n" + vi);
 
         if (vi.id <= 0) {
-            int vid = findViewerId(vi);
-            if (vid < 0) {
-                log.severe("Failed to add viewer snapshot due to lack of id for viewer: \n" + vi);
+            int aid = findAccountId(vi);
+            if (aid < 0) {
+                log.severe("Failed to add account snapshot due to lack of id for Account: \n" + vi);
                 return -1;
             } else {
-                vi.id = vid;
+                vi.id = aid;
             }
         }
 
         List<Parameter> params = new ArrayList<>();
-        params.add(new Parameter(DataType.INT, "vid", vi.id));
+        params.add(new Parameter(DataType.INT, "aid", vi.id));
         params.add(new Parameter(DataType.STRING, "userId", vi.userId));
         params.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
         params.add(new Parameter(DataType.STRING, "platform", vi.platform));
@@ -301,19 +296,19 @@ public class VBHandler {
         params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
         params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
 
-        long key = SQLUtil.insert(con, "vsnapshots", params);
+        long key = SQLUtil.insert(con, "snapshots", params);
         if(key < 0) {
-            log.severe("Failed to add viewer snapshot for viewer: \n" + vi);
+            log.severe("Failed to add account snapshot for Account: \n" + vi);
             return -1;
         }
 
         vi.latestSnapshot = (int)key;
 
         EventInfo ei = new EventInfo()
-                .viewer(vi)
+                .account(vi)
                 .snapshotId(vi.latestSnapshot)
                 .uptype("technical")
-                .action("vsnapshot");
+                .action("snapshot");
         addHistory(ei);
 
         return vi.latestSnapshot;
@@ -329,7 +324,7 @@ public class VBHandler {
         log.debug("Adding history for event: \n" + ei);
 
         List<Parameter> params = new ArrayList<>();
-        params.add(new Parameter(DataType.INT, "vid", ei.viewer.id));
+        params.add(new Parameter(DataType.INT, "aid", ei.account.id));
         params.add(new Parameter(DataType.INT, "sid", ei.snapshotId));
         params.add(new Parameter(DataType.STRING, "uptype", ei.uptype));
         params.add(new Parameter(DataType.STRING, "action", ei.action));
@@ -345,15 +340,15 @@ public class VBHandler {
     }
 
     /**
-     * @return viewerId if viewer exists,
-     *         -1 if successfully found no viewer,
+     * @return AccountId if Account exists,
+     *         -1 if successfully found no Account,
      *         -2 if errored
      */
-    public int findViewerId(ViewerInfo vi) {
+    public int findAccountId(AccountInfo vi) {
         if (con == null) {
             getConnection();
         }
-        log.trace("searching for id of viewer: \n" + vi);
+        log.trace("searching for id of Account: \n" + vi);
 
         List<Parameter> whereList = new ArrayList<>();
 
@@ -372,49 +367,49 @@ public class VBHandler {
                 whereList.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
             } else {
                 //abort
-                log.warn("abort finding viewer: \n" + vi);
+                log.warn("abort finding Account: \n" + vi);
                 return -2;
             }
         } else {
-            log.warn("abort finding viewer: \n" + vi);
+            log.warn("abort finding Account: \n" + vi);
             return -2;
         }
 
-        int viewerId;
+        int accountId;
         SelectQuery sq = new SelectQuery()
                 .select("id")
-                .from("viewers")
+                .from("accounts")
                 .where(whereList);
         ActiveResult ar = SQLUtil.select(con, sq);
         try {
             if (!ar.rs.next() || ar.rs.getInt("id") <= 0 ) {
-                log.warn("unable to find viewer: \n" + vi);
+                log.warn("unable to find Account: \n" + vi);
                 return -1;
             }
-            viewerId = ar.rs.getInt("id");
+            accountId = ar.rs.getInt("id");
         } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while finding viewer: " + vi);
+            SQLUtil.SQLExHandle(e,"SQLException while finding Account: " + vi);
             return -2;
         } finally { ar.close(); }
 
-        vi.id(viewerId);
-        log.debug("found viewer id " + viewerId + " for viewer: \n" + vi);
-        return viewerId;
+        vi.id(accountId);
+        log.debug("found Account id " + accountId + " for Account: \n" + vi);
+        return accountId;
     }
 
-    public ViewerInfo retrieveCurrentViewerInfo(long id) {
+    public AccountInfo retrieveCurrentAccountInfo(long id) {
         if (con == null) {
             getConnection();
         }
-        log.trace("retrieving current viewer info.");
+        log.trace("retrieving current Account info.");
 
-        SelectQuery sq = new SelectQuery().select("*").from("viewers").where(SQLUtil.qpl(DataType.INT, "id", id));
+        SelectQuery sq = new SelectQuery().select("*").from("accounts").where(SQLUtil.qpl(DataType.INT, "id", id));
         ActiveResult ar = SQLUtil.select(con, sq);
         ResultSet rs = ar.rs;
-        ViewerInfo ci = new ViewerInfo();
+        AccountInfo ci = new AccountInfo();
         try {
             if (!rs.next()) {
-                log.warn("unable to find viewer with id: \n" + id);
+                log.warn("unable to find Account with id: \n" + id);
                 return null;
             }
 
@@ -433,95 +428,93 @@ public class VBHandler {
                     .link(rs.getString("link"))
                     .imageLink(rs.getString("imageLink"))
                     .followersCount((int)rs.getLong("followersCount"))
-                    .subCount((int)rs.getLong("subCount"))
-                    .watchtime((int)rs.getLong("watchtime"))
-                    .tskrpoints((int)rs.getLong("tskrpoints"));
+                    .subCount((int)rs.getLong("subCount"));
         } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while retrieving viewer info with id: \n" + id);
+            SQLUtil.SQLExHandle(e,"SQLException while retrieving Account info with id: \n" + id);
         } finally { ar.close(); }
-        log.debug("retrieved current viewer info: \n" + ci);
+        log.debug("retrieved current Account info: \n" + ci);
         return ci;
     }
 
-    public boolean verifyCurrentViewerInfo(ViewerInfo vi) {
-        log.trace("verifying current viewer info for viewer: \n" + vi);
-        ViewerInfo ci = retrieveCurrentViewerInfo(vi.id);
+    public boolean verifyCurrentAccountInfo(AccountInfo vi) {
+        log.trace("verifying current Account info for Account: \n" + vi);
+        AccountInfo ci = retrieveCurrentAccountInfo(vi.id);
         boolean result = vi.similar(ci);
-        log.debug("viewer info is " + (result? "" : "not") + " current for viewer: \n" + vi + " with current info: \n" + ci);
+        log.debug("Account info is " + (result? "" : "not") + " current for Account: \n" + vi + " with current info: \n" + ci);
         return result;
     }
 
-    public List<Long> listAllViewers() {
+    public List<Long> listAllAccounts() {
         List<Long> ids = new ArrayList<>();
         if (con == null) {
             getConnection();
         }
-        log.trace("listing all viewers");
+        log.trace("listing all Accounts");
 
         SelectQuery sq = new SelectQuery()
                 .select("id")
-                .from("viewers");
+                .from("accounts");
         ActiveResult ar = SQLUtil.select(con, sq);
         try {
             while(ar.rs.next()) {
                 ids.add(ar.rs.getLong("id"));
             }
         } catch(SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while selecting all viewer ids");
+            SQLUtil.SQLExHandle(e,"SQLException while selecting all Account ids");
         } finally { ar.close(); }
 
-        log.debug("all viewers list: " + ids);
+        log.debug("all Accounts list: " + ids);
         return ids;
     }
 
-    public int findLatestSnapshot(int vid) {
+    public int findLatestSnapshot(int aid) {
         if (con == null) {
             getConnection();
         }
-        log.trace("searching for id of latest snapshot for viewer with id: " + vid);
+        log.trace("searching for id of latest snapshot for Account with id: " + aid);
 
         SelectQuery sq = new SelectQuery()
                 .select("latestSnapshot")
-                .from("viewers")
-                .where(SQLUtil.qpl(DataType.INT, "id", vid));
+                .from("accounts")
+                .where(SQLUtil.qpl(DataType.INT, "id", aid));
 
         int sid = -1;
         ActiveResult ar = SQLUtil.select(con, sq);
         try {
             if (!ar.rs.next()) {
-                log.warn("unable to find viewer latestSnapshot for viewer with id: " + vid);
+                log.warn("unable to find Account latestSnapshot for Account with id: " + aid);
                 return -1;
             }
             sid = ar.rs.getInt("latestSnapshot");
         } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while searching for viewer latest snapshot: " + vid);
+            SQLUtil.SQLExHandle(e,"SQLException while searching for Account latest snapshot: " + aid);
         } finally { ar.close(); }
 
-        log.debug("id of latest snapshot is "+ sid + " for viewer with id " + vid);
+        log.debug("id of latest snapshot is "+ sid + " for Account with id " + aid);
         return sid;
     }
 
-    public Parameter findLastSnapshotValue(int vid, Parameter toFind) {
+    public Parameter findLastSnapshotValue(int aid, Parameter toFind) {
         if (con == null) {
             getConnection();
         }
-        log.trace("finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
+        log.trace("finding last value of " + toFind + " for Account " + aid + " in snapshot records.");
 
         Object value = null;
-        if(toFind.type == DataType.INT) value = ViewerInfo.INT_DEFAULT;
-        if(toFind.type == DataType.STRING) value = ViewerInfo.STRING_DEFAULT;
+        if(toFind.type == DataType.INT) value = AccountInfo.INT_DEFAULT;
+        if(toFind.type == DataType.STRING) value = AccountInfo.STRING_DEFAULT;
 
         SelectQuery sq = new SelectQuery()
                 .select(SQLUtil.qpl(toFind))
-                .from("vsnapshots")
-                .where(SQLUtil.qpl(DataType.INT,"vid",vid))
+                .from("snapshots")
+                .where(SQLUtil.qpl(DataType.INT,"aid",aid))
                 .orderBy("id").desc();
         ActiveResult ar = SQLUtil.select(con, sq);
         try {
             while(ar.rs.next()) {
                 if(toFind.type == DataType.INT) {
                     long result = ar.rs.getLong(toFind.column);
-                    if(result == ViewerInfo.INT_DEFAULT) {
+                    if(result == AccountInfo.INT_DEFAULT) {
                         continue;
                     } else {
                         value = result;
@@ -530,13 +523,13 @@ public class VBHandler {
                 } else if(toFind.type == DataType.STRING) {
                     String result = ar.rs.getString(toFind.column);
                     log.debug("lastValue contender: ", result);
-                    if(result == null || result.equals(ViewerInfo.STRING_DEFAULT)) {
+                    if(result == null || result.equals(AccountInfo.STRING_DEFAULT)) {
                         continue;
                     } else {
                         if(toFind.column == "roles") { //special case due to serialization, if this becomes regular need to add DataType.SERIALIZED
                             if(result.equals("[]")) continue;
                         } else if(toFind.column == "channelId") { //special case due to for some reason API returning int values
-                            if(result.equals(String.valueOf(ViewerInfo.INT_DEFAULT))) continue;
+                            if(result.equals(String.valueOf(AccountInfo.INT_DEFAULT))) continue;
                         }
                         value = result;
                         break;
@@ -544,11 +537,11 @@ public class VBHandler {
                 }
             }
         } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e, "SQLException while finding last value of " + toFind + " for viewer " + vid + " in snapshot records.");
+            SQLUtil.SQLExHandle(e, "SQLException while finding last value of " + toFind + " for Account " + aid + " in snapshot records.");
         } finally { ar.close(); }
 
         Parameter result = new Parameter(toFind.type, toFind.column, value);
-        log.debug("last value of " + toFind + " for viewer " + vid + " in snapshot records: \n" + result);
+        log.debug("last value of " + toFind + " for Account " + aid + " in snapshot records: \n" + result);
         return result;
     }
 }
