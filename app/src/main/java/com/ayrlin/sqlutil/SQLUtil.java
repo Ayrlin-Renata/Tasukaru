@@ -2,14 +2,14 @@ package com.ayrlin.sqlutil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.ayrlin.sqlutil.query.*;
-import com.ayrlin.sqlutil.query.Parameter.DataType;
+import com.ayrlin.sqlutil.query.data.*;
+import com.ayrlin.sqlutil.query.data.OpParam.Op;
 
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
@@ -25,24 +25,8 @@ public class SQLUtil {
      * @param matchConditions
      * @return
      */
-    public static ActiveResult select(Connection con, List<Parameter> columns, String table, List<Parameter> matchConditions) {
-        SelectQuery q = new SelectQuery().select(columns).from(table).where(matchConditions);
-        return select(con, q);
-    }
-    public static ActiveResult select(Connection con, SelectQuery q) {
-        if(!q.isReady()) {
-            FastLogger.logStatic(LogLevel.SEVERE,"query is unexpectedly not ready: \n" + q);
-            return null;
-        }
-        try {
-            PreparedStatement prep = q.prepare(con);
-            ResultSet res = prep.executeQuery();
-            FastLogger.logStatic(LogLevel.TRACE, "SELECT statement executed.");
-            return new ActiveResult(con, prep, res);
-        } catch (SQLException e) {
-            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
-            return null;
-        }
+    public static ActiveResult select(Connection con, List<Param> columns, String table, List<OpParam> matchConditions) {
+        return new SelectQuery().select(columns).from(table).where(matchConditions).execute(con);
     }
 
     /**
@@ -52,68 +36,33 @@ public class SQLUtil {
      * @param params
      * @return generated keys, -1 if failed to execute, -2 if query unsuccessful, -3 if key unable to be retrieved.
      */
-    public static long insert(Connection con, String table, List<Parameter> params) {
-        InsertQuery q = new InsertQuery().into(table).values(params);
-        if(!q.isReady()) {
-            FastLogger.logStatic(LogLevel.SEVERE,"query is unexpectedly not ready: \n" + q);
-            return -1;
-        }
-        int matched, rows;
-        long key;
-        try (PreparedStatement prep = q.prepare(con)) {
-            matched = prep.executeUpdate();
-            rows = prep.getUpdateCount(); 
-            try (ResultSet gk = prep.getGeneratedKeys()) {
-                key = -1; 
-                if(gk.next()) {
-                    key = gk.getLong(1);
-                }
-            } catch (SQLException e) {
-                SQLExHandle(e, "failed to retrieve generated keys SQL query: \n" + q.getQueryString());
-                return -1;
-            }
-        } catch (SQLException e) {
-            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
-            return -1;
-        }
-        
-        FastLogger.logStatic(LogLevel.DEBUG, "INSERT statement (key " + key + ") executed, matching " + matched + " rows and impacting " + rows + " rows.");
-        if(matched <= 0) return -2; //successful insert returns matched 1 rows 0 for weird reasons
-        if(key < 0) {
-            int lid = retrieveLastInsertId(con);
-            if(lid < 0) return -3;
-            key = lid;
-        }
-        return key;
+    public static long insert(Connection con, String table, List<Param> params) {
+        return new InsertQuery().into(table).values(params).execute(con);
     }
 
-    public static boolean update(Connection con, String table, List<Parameter> setValues, List<Parameter> matchConditions) {
-        UpdateQuery q = new UpdateQuery().update(table).set(setValues).where(matchConditions);
-        if(!sanityCheck(con, table, matchConditions)) {
-            FastLogger.logStatic(LogLevel.SEVERE,"cannot proceed with UPDATE query: \n" + q);
-            return false;
-        }
-        if(!q.isReady()) {
-            FastLogger.logStatic(LogLevel.SEVERE,"query is unexpectedly not ready: \n" + q);
-            return false;
-        }
-        int matched, rows;
-        try (PreparedStatement prep = q.prepare(con);) {
-            matched = prep.executeUpdate();
-            rows = prep.getUpdateCount(); 
-        } catch (SQLException e) {
-            SQLExHandle(e, "failed to execute SQL query: \n" + q.getQueryString());
-            return false;
-        }
-        FastLogger.logStatic(LogLevel.TRACE, "UPDATE statement executed, matching " + matched + " rows and impacting " + rows + " rows.");
-        if(matched <= 0) return false; //successful update returns matched 1 rows 0 for weird reasons
-        return true;
+    /**
+     * 
+     * @param con
+     * @param table
+     * @param setValues
+     * @param matchConditions
+     * @return true if it worked, false otherwise
+     */
+    public static boolean update(Connection con, String table, List<Param> setValues, List<OpParam> matchConditions) {
+        return new UpdateQuery().update(table).set(setValues).where(matchConditions).execute(con);
     }
 
-    public static boolean sanityCheck(Connection con, String table, List<Parameter> matchConditions) {
-        List<Parameter> all = retrieveColumnNames(con, table);
+    /**
+     * for making the WHERE part of a query actually returns results
+     * @param con
+     * @param table
+     * @param matchConditions
+     * @return true if it does (ResultSet.next() is true)
+     */
+    public static boolean sanityCheck(Connection con, String table, List<OpParam> matchConditions) {
+        List<Param> all = retrieveColumnNames(con, table);
         SelectQuery q = new SelectQuery().select(all).from(table).where(matchConditions);
-        ActiveResult ar = select(con, q);
+        ActiveResult ar = q.execute(con);
         try {
             if(ar.hasNull() || !ar.rs.next()) {
                 FastLogger.logStatic(LogLevel.WARNING, "sanity check failed for query: \n" + q);
@@ -138,9 +87,9 @@ public class SQLUtil {
      * @return
      * @throws SQLException
      */
-    public static PreparedStatement prepDataTypes(PreparedStatement prep, List<Parameter> params) throws SQLException {
+    public static PreparedStatement prepDataTypes(PreparedStatement prep, List<Param> params) throws SQLException {
         for(int i = 0; i < params.size(); i++) {
-            Parameter p = params.get(i);
+            Param p = params.get(i);
             switch(p.type) {
                 case STRING : 
                     prep.setString(i + 1, (String)p.value); //+1 because prepared statement indexes are 1-based
@@ -160,6 +109,12 @@ public class SQLUtil {
         return prep;
     }
 
+    public static List<Param> opToParam(List<OpParam> opParam) {
+        List<Param> param = new ArrayList<>();
+        param.addAll(opParam);
+        return param;
+    }
+
     /**
      * Quick Param List
      * just makes a list out of data for one param for shorthand
@@ -168,13 +123,31 @@ public class SQLUtil {
      * @param value
      * @return an ArrayList containing one param built as specified
      */
-    public static List<Parameter> qpl(DataType type, String col, Object value) {
-        return qpl(new Parameter(type, col, value));
+    public static List<Param> qpl(DataType type, String col, Object value) {
+        return qpl(new Param(type, col, value));
     }
-    public static List<Parameter> qpl(Parameter p) {
-        List<Parameter> qpl = new ArrayList<>();
+    public static List<Param> qpl(Param p) {
+        List<Param> qpl = new ArrayList<>();
         qpl.add(p);
         return qpl;
+    }
+
+    /**
+     * Quick OpParam List
+     * just makes a list out of data for one param for shorthand
+     * @param type
+     * @param col
+     * @param op
+     * @param value
+     * @return an ArrayList containing one param built as specified
+     */
+    public static List<OpParam> qol(DataType type, String col, Op op, Object value) {
+        return qol(new OpParam(type, col, op, value));
+    }
+    public static List<OpParam> qol(OpParam p) {
+        List<OpParam> qol = new ArrayList<>();
+        qol.add(p);
+        return qol;
     }
 
     /**
@@ -197,19 +170,19 @@ public class SQLUtil {
         return lid;
     }
 
-    public static List<Parameter> retrieveColumnNames(Connection con, String table) {
-        ArrayList<Parameter> name = new ArrayList<>();
-        name.add(new Parameter(DataType.STRING,"name",""));
+    public static List<Param> retrieveColumnNames(Connection con, String table) {
+        ArrayList<Param> name = new ArrayList<>();
+        name.add(new Param(DataType.STRING,"name",""));
         SelectQuery q = new SelectQuery().select(name).from("pragma_table_info('" + table + "')");
-        ActiveResult ar = select(con, q); 
+        ActiveResult ar = q.execute(con); 
         if(ar.hasNull()) {
             FastLogger.logStatic(LogLevel.SEVERE, "cannot retrieve column names for table " + table);
             return null;
         }
-        List<Parameter> cols = new ArrayList<>();
+        List<Param> cols = new ArrayList<>();
         try {
             while (ar.rs.next()) {
-                cols.add(new Parameter(DataType.STRING,ar.rs.getString("name"),""));
+                cols.add(new Param(DataType.STRING,ar.rs.getString("name"),""));
             }
             ar.close();
         } catch(SQLException e) {

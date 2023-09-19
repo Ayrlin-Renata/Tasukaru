@@ -1,9 +1,11 @@
 package com.ayrlin.tasukaru;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.ayrlin.sqlutil.query.Parameter;
+import com.ayrlin.sqlutil.query.data.Param;
 
+import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TLogic {
@@ -59,16 +61,29 @@ public class TLogic {
         return false;
     }
 
+    public static void updatePlatforms(FastLogger log, VBHandler vb) {
+        log.trace("Updating platforms for viewers table.");
+        List<String> cols = new ArrayList<>();
+        for (UserPlatform plat : UserPlatform.values()) {
+            if(plat == UserPlatform.CASTERLABS_SYSTEM || plat == UserPlatform.CUSTOM_INTEGRATION) {
+                continue; //these are for system messages and integrations like Ko-Fi
+            }
+            cols.add(plat.name());
+        }
+        log.debug("Found supported CL platforms: \n" + cols);
+        vb.checkAddCols(log, cols);
+    }
+
     public static void fillAccountTableHoles(FastLogger log, VBHandler vb) {
         //find holes
         List<Long> aids = vb.listAllAccounts();
         for (long aid : aids) {
             log.trace("filling holes for viewer " + aid);
             AccountInfo vi = vb.retrieveCurrentAccountInfo(aid);
-            List<Parameter> missingList = vi.listUnfilledValues();
+            List<Param> missingList = vi.listUnfilledValues();
             if(missingList.isEmpty()) continue;
-            for (Parameter p : missingList) {
-                Parameter sp = vb.findLastSnapshotValue(vi.id, p);
+            for (Param p : missingList) {
+                Param sp = vb.findLastSnapshotValue(vi.id, p);
                 if(sp.value != null) {
                     vi.modifyFromParameter(sp);
                 }

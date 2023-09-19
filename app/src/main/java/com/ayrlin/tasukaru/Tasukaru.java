@@ -60,8 +60,8 @@ public class Tasukaru extends CaffeinatedPlugin {
             try {
                 log.info("DB maintenance thread init");
                 // TODO implement backups
+                TLogic.updatePlatforms(log, vb);
                 TLogic.fillAccountTableHoles(log, vb);
-                //TLogic.refreshLatestSnapshots();
             } catch(Exception e) {
                 log.severe("Exception running async thread!\n" + e.getMessage());
                 log.severe(e.getStackTrace());

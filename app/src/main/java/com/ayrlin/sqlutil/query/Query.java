@@ -10,4 +10,5 @@ public interface Query {
     public String getQueryString();
     
     public PreparedStatement prepare(Connection con) throws SQLException;
+    public Object execute(Connection con);
 }

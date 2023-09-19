@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.ayrlin.sqlutil.query.Parameter;
-import com.ayrlin.sqlutil.query.Parameter.DataType;
+import com.ayrlin.sqlutil.query.data.DataType;
+import com.ayrlin.sqlutil.query.data.Param;
 
 import co.casterlabs.koi.api.types.user.User;
 import co.casterlabs.koi.api.types.user.User.UserRoles;
@@ -257,30 +257,30 @@ public class AccountInfo {
         return similar;
     }
 
-    public List<Parameter> listUnfilledValues() {
-        List<Parameter> params = new ArrayList<>();
-        if(id == DEFAULT_id) params.add(new Parameter(DataType.INT, "id", DEFAULT_id));
-        if(latestSnapshot == DEFAULT_latestSnapshot) params.add(new Parameter(DataType.INT, "latestSnapshot", DEFAULT_latestSnapshot));
-        if(userId.equals(DEFAULT_userId)) params.add(new Parameter(DataType.STRING, "userId", DEFAULT_userId));
-        if(channelId.equals(DEFAULT_channelId) || channelId.equals(String.valueOf(INT_DEFAULT))) params.add(new Parameter(DataType.STRING, "channelId", DEFAULT_channelId));
-        if(platform.equals(DEFAULT_platform)) params.add(new Parameter(DataType.STRING, "platform", DEFAULT_platform));
-        if(UPID.equals(DEFAULT_UPID)) params.add(new Parameter(DataType.STRING, "UPID", DEFAULT_UPID));
-        if(roles.equals(DEFAULT_roles)) params.add(new Parameter(DataType.STRING, "roles", DEFAULT_roles));
-        if(badges.equals(DEFAULT_badges)) params.add(new Parameter(DataType.STRING, "badges", DEFAULT_badges));
-        if(color.equals(DEFAULT_color)) params.add(new Parameter(DataType.STRING, "color", DEFAULT_color));
-        if(username.equals(DEFAULT_username)) params.add(new Parameter(DataType.STRING, "username", DEFAULT_username));
-        if(displayname.equals(DEFAULT_displayname)) params.add(new Parameter(DataType.STRING, "displayname", DEFAULT_displayname));
-        if(bio.equals(DEFAULT_bio)) params.add(new Parameter(DataType.STRING, "bio", DEFAULT_bio));
-        if(link.equals(DEFAULT_link)) params.add(new Parameter(DataType.STRING, "link", DEFAULT_link));
-        if(imageLink.equals(DEFAULT_imageLink)) params.add(new Parameter(DataType.STRING, "imageLink", DEFAULT_imageLink));
-        if(followersCount == DEFAULT_followersCount) params.add(new Parameter(DataType.INT, "followersCount", DEFAULT_followersCount));
-        if(subCount == DEFAULT_subCount) params.add(new Parameter(DataType.INT, "subCount", DEFAULT_subCount));
+    public List<Param> listUnfilledValues() {
+        List<Param> params = new ArrayList<>();
+        if(id == DEFAULT_id) params.add(new Param(DataType.INT, "id", DEFAULT_id));
+        if(latestSnapshot == DEFAULT_latestSnapshot) params.add(new Param(DataType.INT, "latestSnapshot", DEFAULT_latestSnapshot));
+        if(userId.equals(DEFAULT_userId)) params.add(new Param(DataType.STRING, "userId", DEFAULT_userId));
+        if(channelId.equals(DEFAULT_channelId) || channelId.equals(String.valueOf(INT_DEFAULT))) params.add(new Param(DataType.STRING, "channelId", DEFAULT_channelId));
+        if(platform.equals(DEFAULT_platform)) params.add(new Param(DataType.STRING, "platform", DEFAULT_platform));
+        if(UPID.equals(DEFAULT_UPID)) params.add(new Param(DataType.STRING, "UPID", DEFAULT_UPID));
+        if(roles.equals(DEFAULT_roles)) params.add(new Param(DataType.STRING, "roles", DEFAULT_roles));
+        if(badges.equals(DEFAULT_badges)) params.add(new Param(DataType.STRING, "badges", DEFAULT_badges));
+        if(color.equals(DEFAULT_color)) params.add(new Param(DataType.STRING, "color", DEFAULT_color));
+        if(username.equals(DEFAULT_username)) params.add(new Param(DataType.STRING, "username", DEFAULT_username));
+        if(displayname.equals(DEFAULT_displayname)) params.add(new Param(DataType.STRING, "displayname", DEFAULT_displayname));
+        if(bio.equals(DEFAULT_bio)) params.add(new Param(DataType.STRING, "bio", DEFAULT_bio));
+        if(link.equals(DEFAULT_link)) params.add(new Param(DataType.STRING, "link", DEFAULT_link));
+        if(imageLink.equals(DEFAULT_imageLink)) params.add(new Param(DataType.STRING, "imageLink", DEFAULT_imageLink));
+        if(followersCount == DEFAULT_followersCount) params.add(new Param(DataType.INT, "followersCount", DEFAULT_followersCount));
+        if(subCount == DEFAULT_subCount) params.add(new Param(DataType.INT, "subCount", DEFAULT_subCount));
 
         FastLogger.logStatic(LogLevel.TRACE, "unfilled values for viewer " + id + ": \n" + params);
         return params;
     }
 
-    public void modifyFromParameter(Parameter sp) {
+    public void modifyFromParameter(Param sp) {
         FastLogger.logStatic(LogLevel.TRACE, "Modifying by parameter " + sp + " for viewer " + id);
         if(sp.type == DataType.INT) {
             long value = Long.parseLong(String.valueOf(sp.value));

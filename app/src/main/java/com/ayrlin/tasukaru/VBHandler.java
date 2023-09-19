@@ -3,13 +3,17 @@ package com.ayrlin.tasukaru;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
-import com.ayrlin.sqlutil.query.Parameter;
+import com.ayrlin.sqlutil.query.AlterTableQuery;
 import com.ayrlin.sqlutil.query.SelectQuery;
-
-import com.ayrlin.sqlutil.query.Parameter.DataType;
+import com.ayrlin.sqlutil.query.data.DataType;
+import com.ayrlin.sqlutil.query.data.OpParam;
+import com.ayrlin.sqlutil.query.data.Param;
+import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.Col;
 
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -72,7 +76,7 @@ public class VBHandler {
             if(!versionCheckResult.next()) {
                 log.severe("malformed meta table has no version");
             } else {
-                String readVersion = versionCheckResult.getString("property"); 
+                String readVersion = versionCheckResult.getString("value"); 
                 if(!readVersion.equals(vbVersion)) {
                     log.warn("Mismatched versions! Database reports as version " + readVersion + ", plugin version is " + vbVersion + "!");
                     //TODO update DB to current version, including backup
@@ -93,6 +97,14 @@ public class VBHandler {
                     .next()) {
                 log.warn("No Accounts table found, creating new Accounts table.");
                 createAccountTable();
+            }
+
+            // VIEWERS
+            if (!con.createStatement()
+                    .executeQuery(checkSQLBegin + "viewers" + checkSQLEnd)
+                    .next()) {
+                log.warn("No Viewers table found, creating new Viewers table.");
+                createViewersTable();
             }
 
             // HISTORY
@@ -160,6 +172,15 @@ public class VBHandler {
                 + ");");
     }
 
+    private void createViewersTable() throws SQLException {
+        // accounts table definition
+        con.createStatement().executeUpdate("CREATE TABLE `viewers` (" 
+                + "id INTEGER PRIMARY KEY,"
+                + "watchtime INTEGER,"
+                + "points INTEGER"
+                + ");");
+    }
+
     private void createHistoryTable() throws SQLException {
         // history table definition
         con.createStatement().executeUpdate("CREATE TABLE `history` ("
@@ -184,23 +205,23 @@ public class VBHandler {
         }
         log.debug("Adding Account: \n" + vi);
 
-        List<Parameter> params = new ArrayList<>();
-        params.add(new Parameter(DataType.INT, "latestSnapshot", -1)); //default
-        params.add(new Parameter(DataType.STRING, "userId", vi.userId));
-        params.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
-        params.add(new Parameter(DataType.STRING, "platform", vi.platform));
-        params.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
+        List<Param> params = new ArrayList<>();
+        params.add(new Param(DataType.INT, "latestSnapshot", -1)); //default
+        params.add(new Param(DataType.STRING, "userId", vi.userId));
+        params.add(new Param(DataType.STRING, "channelId", vi.channelId));
+        params.add(new Param(DataType.STRING, "platform", vi.platform));
+        params.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
-        params.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
-        params.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
-        params.add(new Parameter(DataType.STRING, "color", vi.color));
-        params.add(new Parameter(DataType.STRING, "username", vi.username));
-        params.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
-        params.add(new Parameter(DataType.STRING, "bio", vi.bio));
-        params.add(new Parameter(DataType.STRING, "link", vi.link));
-        params.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
-        params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
-        params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+        params.add(new Param(DataType.STRING, "roles", vi.getRoles()));
+        params.add(new Param(DataType.STRING, "badges", vi.getBadges()));
+        params.add(new Param(DataType.STRING, "color", vi.color));
+        params.add(new Param(DataType.STRING, "username", vi.username));
+        params.add(new Param(DataType.STRING, "displayname", vi.displayname));
+        params.add(new Param(DataType.STRING, "bio", vi.bio));
+        params.add(new Param(DataType.STRING, "link", vi.link));
+        params.add(new Param(DataType.STRING, "imageLink", vi.imageLink));
+        params.add(new Param(DataType.INT, "followersCount", vi.followersCount));
+        params.add(new Param(DataType.INT, "subCount", vi.subCount));
 
         long key = SQLUtil.insert(con, "accounts", params);
         if(key < 0) {
@@ -229,26 +250,26 @@ public class VBHandler {
         addSnapshot(vi);
         log.trace("Inserting new latestSnapshot into update: " + vi.latestSnapshot);
         
-        List<Parameter> setParams = new ArrayList<>();
-        setParams.add(new Parameter(DataType.INT, "latestSnapshot", vi.latestSnapshot));
-        setParams.add(new Parameter(DataType.STRING, "userId", vi.userId));
-        setParams.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
-        setParams.add(new Parameter(DataType.STRING, "platform", vi.platform));
-        setParams.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
+        List<Param> setParams = new ArrayList<>();
+        setParams.add(new Param(DataType.INT, "latestSnapshot", vi.latestSnapshot));
+        setParams.add(new Param(DataType.STRING, "userId", vi.userId));
+        setParams.add(new Param(DataType.STRING, "channelId", vi.channelId));
+        setParams.add(new Param(DataType.STRING, "platform", vi.platform));
+        setParams.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
-        setParams.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
-        setParams.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
-        setParams.add(new Parameter(DataType.STRING, "color", vi.color));
-        setParams.add(new Parameter(DataType.STRING, "username", vi.username));
-        setParams.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
-        setParams.add(new Parameter(DataType.STRING, "bio", vi.bio));
-        setParams.add(new Parameter(DataType.STRING, "link", vi.link));
-        setParams.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
-        setParams.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
-        setParams.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+        setParams.add(new Param(DataType.STRING, "roles", vi.getRoles()));
+        setParams.add(new Param(DataType.STRING, "badges", vi.getBadges()));
+        setParams.add(new Param(DataType.STRING, "color", vi.color));
+        setParams.add(new Param(DataType.STRING, "username", vi.username));
+        setParams.add(new Param(DataType.STRING, "displayname", vi.displayname));
+        setParams.add(new Param(DataType.STRING, "bio", vi.bio));
+        setParams.add(new Param(DataType.STRING, "link", vi.link));
+        setParams.add(new Param(DataType.STRING, "imageLink", vi.imageLink));
+        setParams.add(new Param(DataType.INT, "followersCount", vi.followersCount));
+        setParams.add(new Param(DataType.INT, "subCount", vi.subCount));
         
-        List<Parameter> whereParams = new ArrayList<>();
-        whereParams.add(new Parameter(DataType.INT, "id", vi.id));
+        List<OpParam> whereParams = new ArrayList<>();
+        whereParams.add(new OpParam(DataType.INT, "id", Op.EQUAL, vi.id));
         
         if(!SQLUtil.update(con, "accounts", setParams, whereParams)) {
             log.severe("failed to update Account: \n" + vi);
@@ -278,23 +299,23 @@ public class VBHandler {
             }
         }
 
-        List<Parameter> params = new ArrayList<>();
-        params.add(new Parameter(DataType.INT, "aid", vi.id));
-        params.add(new Parameter(DataType.STRING, "userId", vi.userId));
-        params.add(new Parameter(DataType.STRING, "channelId", vi.channelId));
-        params.add(new Parameter(DataType.STRING, "platform", vi.platform));
-        params.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
+        List<Param> params = new ArrayList<>();
+        params.add(new Param(DataType.INT, "aid", vi.id));
+        params.add(new Param(DataType.STRING, "userId", vi.userId));
+        params.add(new Param(DataType.STRING, "channelId", vi.channelId));
+        params.add(new Param(DataType.STRING, "platform", vi.platform));
+        params.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
-        params.add(new Parameter(DataType.STRING, "roles", vi.getRoles()));
-        params.add(new Parameter(DataType.STRING, "badges", vi.getBadges()));
-        params.add(new Parameter(DataType.STRING, "color", vi.color));
-        params.add(new Parameter(DataType.STRING, "username", vi.username));
-        params.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
-        params.add(new Parameter(DataType.STRING, "bio", vi.bio));
-        params.add(new Parameter(DataType.STRING, "link", vi.link));
-        params.add(new Parameter(DataType.STRING, "imageLink", vi.imageLink));
-        params.add(new Parameter(DataType.INT, "followersCount", vi.followersCount));
-        params.add(new Parameter(DataType.INT, "subCount", vi.subCount));
+        params.add(new Param(DataType.STRING, "roles", vi.getRoles()));
+        params.add(new Param(DataType.STRING, "badges", vi.getBadges()));
+        params.add(new Param(DataType.STRING, "color", vi.color));
+        params.add(new Param(DataType.STRING, "username", vi.username));
+        params.add(new Param(DataType.STRING, "displayname", vi.displayname));
+        params.add(new Param(DataType.STRING, "bio", vi.bio));
+        params.add(new Param(DataType.STRING, "link", vi.link));
+        params.add(new Param(DataType.STRING, "imageLink", vi.imageLink));
+        params.add(new Param(DataType.INT, "followersCount", vi.followersCount));
+        params.add(new Param(DataType.INT, "subCount", vi.subCount));
 
         long key = SQLUtil.insert(con, "snapshots", params);
         if(key < 0) {
@@ -323,14 +344,14 @@ public class VBHandler {
         }
         log.debug("Adding history for event: \n" + ei);
 
-        List<Parameter> params = new ArrayList<>();
-        params.add(new Parameter(DataType.INT, "aid", ei.account.id));
-        params.add(new Parameter(DataType.INT, "sid", ei.snapshotId));
-        params.add(new Parameter(DataType.STRING, "uptype", ei.uptype));
-        params.add(new Parameter(DataType.STRING, "action", ei.action));
-        params.add(new Parameter(DataType.INT, "value", ei.value));
-        params.add(new Parameter(DataType.STRING, "streamState", ei.streamState));
-        params.add(new Parameter(DataType.TIMESTAMP, "timestamp", ei.timestamp));
+        List<Param> params = new ArrayList<>();
+        params.add(new Param(DataType.INT, "aid", ei.account.id));
+        params.add(new Param(DataType.INT, "sid", ei.snapshotId));
+        params.add(new Param(DataType.STRING, "uptype", ei.uptype));
+        params.add(new Param(DataType.STRING, "action", ei.action));
+        params.add(new Param(DataType.INT, "value", ei.value));
+        params.add(new Param(DataType.STRING, "streamState", ei.streamState));
+        params.add(new Param(DataType.TIMESTAMP, "timestamp", ei.timestamp));
 
         long key = SQLUtil.insert(con, "history", params);
         if(key < 0) {
@@ -350,21 +371,21 @@ public class VBHandler {
         }
         log.trace("searching for id of Account: \n" + vi);
 
-        List<Parameter> whereList = new ArrayList<>();
+        List<OpParam> whereList = new ArrayList<>();
 
         // determine most reliable info
         if (!vi.UPID.isEmpty()) {
-            whereList.add(new Parameter(DataType.STRING, "UPID", vi.UPID));
+            whereList.add(new OpParam(DataType.STRING, "UPID", Op.EQUAL, vi.UPID));
         } else if (!vi.platform.isEmpty()) {
-            whereList.add(new Parameter(DataType.STRING, "platform", vi.platform));
+            whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, vi.platform));
             if (!vi.userId.isEmpty()) {
-                whereList.add(new Parameter(DataType.STRING, "userId", vi.userId));
+                whereList.add(new OpParam(DataType.STRING, "userId", Op.EQUAL, vi.userId));
             } else if (!vi.username.isEmpty()) {
-                whereList.add(new Parameter(DataType.STRING, "username", vi.username));
+                whereList.add(new OpParam(DataType.STRING, "username", Op.EQUAL, vi.username));
             } else if (!vi.link.isEmpty()) {
-                whereList.add(new Parameter(DataType.STRING, "link", vi.link));
+                whereList.add(new OpParam(DataType.STRING, "link", Op.EQUAL, vi.link));
             } else if (!vi.displayname.isEmpty()) {
-                whereList.add(new Parameter(DataType.STRING, "displayname", vi.displayname));
+                whereList.add(new OpParam(DataType.STRING, "displayname", Op.EQUAL, vi.displayname));
             } else {
                 //abort
                 log.warn("abort finding Account: \n" + vi);
@@ -376,11 +397,7 @@ public class VBHandler {
         }
 
         int accountId;
-        SelectQuery sq = new SelectQuery()
-                .select("id")
-                .from("accounts")
-                .where(whereList);
-        ActiveResult ar = SQLUtil.select(con, sq);
+        ActiveResult ar = new SelectQuery().select("id").from("accounts").where(whereList).execute(con);
         try {
             if (!ar.rs.next() || ar.rs.getInt("id") <= 0 ) {
                 log.warn("unable to find Account: \n" + vi);
@@ -403,8 +420,11 @@ public class VBHandler {
         }
         log.trace("retrieving current Account info.");
 
-        SelectQuery sq = new SelectQuery().select("*").from("accounts").where(SQLUtil.qpl(DataType.INT, "id", id));
-        ActiveResult ar = SQLUtil.select(con, sq);
+        ActiveResult ar = new SelectQuery()
+                .select("*")
+                .from("accounts")
+                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, id))
+                .execute(con);
         ResultSet rs = ar.rs;
         AccountInfo ci = new AccountInfo();
         try {
@@ -451,10 +471,7 @@ public class VBHandler {
         }
         log.trace("listing all Accounts");
 
-        SelectQuery sq = new SelectQuery()
-                .select("id")
-                .from("accounts");
-        ActiveResult ar = SQLUtil.select(con, sq);
+        ActiveResult ar = new SelectQuery().select("id").from("accounts").execute(con);
         try {
             while(ar.rs.next()) {
                 ids.add(ar.rs.getLong("id"));
@@ -473,13 +490,12 @@ public class VBHandler {
         }
         log.trace("searching for id of latest snapshot for Account with id: " + aid);
 
-        SelectQuery sq = new SelectQuery()
+        int sid = -1;
+        ActiveResult ar = new SelectQuery()
                 .select("latestSnapshot")
                 .from("accounts")
-                .where(SQLUtil.qpl(DataType.INT, "id", aid));
-
-        int sid = -1;
-        ActiveResult ar = SQLUtil.select(con, sq);
+                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, aid))
+                .execute(con);
         try {
             if (!ar.rs.next()) {
                 log.warn("unable to find Account latestSnapshot for Account with id: " + aid);
@@ -494,7 +510,7 @@ public class VBHandler {
         return sid;
     }
 
-    public Parameter findLastSnapshotValue(int aid, Parameter toFind) {
+    public Param findLastSnapshotValue(int aid, Param toFind) {
         if (con == null) {
             getConnection();
         }
@@ -504,12 +520,12 @@ public class VBHandler {
         if(toFind.type == DataType.INT) value = AccountInfo.INT_DEFAULT;
         if(toFind.type == DataType.STRING) value = AccountInfo.STRING_DEFAULT;
 
-        SelectQuery sq = new SelectQuery()
+        ActiveResult ar = new SelectQuery()
                 .select(SQLUtil.qpl(toFind))
                 .from("snapshots")
-                .where(SQLUtil.qpl(DataType.INT,"aid",aid))
-                .orderBy("id").desc();
-        ActiveResult ar = SQLUtil.select(con, sq);
+                .where(SQLUtil.qol(DataType.INT,"aid", Op.EQUAL, aid))
+                .orderBy("id").desc()
+                .execute(con);
         try {
             while(ar.rs.next()) {
                 if(toFind.type == DataType.INT) {
@@ -522,7 +538,7 @@ public class VBHandler {
                     }
                 } else if(toFind.type == DataType.STRING) {
                     String result = ar.rs.getString(toFind.column);
-                    log.debug("lastValue contender: ", result);
+                    //log.debug("lastValue contender: ", result);
                     if(result == null || result.equals(AccountInfo.STRING_DEFAULT)) {
                         continue;
                     } else {
@@ -540,8 +556,33 @@ public class VBHandler {
             SQLUtil.SQLExHandle(e, "SQLException while finding last value of " + toFind + " for Account " + aid + " in snapshot records.");
         } finally { ar.close(); }
 
-        Parameter result = new Parameter(toFind.type, toFind.column, value);
+        Param result = new Param(toFind.type, toFind.column, value);
         log.debug("last value of " + toFind + " for Account " + aid + " in snapshot records: \n" + result);
         return result;
+    }
+
+    public void checkAddCols(FastLogger log, List<String> cols) {
+        if(cols.isEmpty()) {
+            log.severe("no supported platforms specified while updating viewer columns!");
+            return;
+        }
+        List<String> vtcols = SQLUtil.retrieveColumnNames(con,"viewers").stream()
+                .map(col -> col.column)
+                .collect(Collectors.toList());
+        if(vtcols.containsAll(cols)) {
+            log.debug("all platforms already available.");
+            return;
+        } else {
+            for (String cname : cols) {
+                if(vtcols.contains(cname)) continue;
+                boolean executed = new AlterTableQuery()
+                        .alterTable("viewers")
+                        .addColumn(new Col(cname, DataType.INT).references("accounts(id)"))
+                        .execute(con);
+                if(!executed) { 
+                    log.warn("while adding platform column " + cname + ", AlterTableQuery claims to have not altered the table. such claims may be greatly exaggerated."); 
+                }
+            }
+        }
     }
 }
