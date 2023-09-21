@@ -25,6 +25,7 @@ public class SelectQuery implements Query {
     public String selectString;
     public String orderBy;
     public boolean asc;
+    public long limit;
 
     public SelectQuery() {
         select = new ArrayList<>();
@@ -32,6 +33,7 @@ public class SelectQuery implements Query {
         selectString = "";
         orderBy = "";
         asc = true;
+        limit = -1;
     }
 
     public SelectQuery select(String s) {
@@ -69,6 +71,11 @@ public class SelectQuery implements Query {
         return this;
     }
 
+    public SelectQuery limit(long limit) {
+        this.limit = limit;
+        return this;
+    }
+
     @Override
     public boolean isReady() {
         if(select.isEmpty() && selectString.isEmpty()) return false;
@@ -97,6 +104,9 @@ public class SelectQuery implements Query {
         }
         if(!orderBy.isEmpty()) {
             qs += " ORDER BY " + orderBy + (asc? " ASC" : " DESC");
+        }
+        if(limit > 0) {
+            qs += " LIMIT " + limit;
         }
         return qs + ";";
     }

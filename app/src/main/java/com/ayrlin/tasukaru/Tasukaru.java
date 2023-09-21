@@ -3,17 +3,12 @@
  */
 package com.ayrlin.tasukaru;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import co.casterlabs.caffeinated.pluginsdk.*;
-import co.casterlabs.commons.async.AsyncTask;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @CaffeinatedPluginImplementation
 public class Tasukaru extends CaffeinatedPlugin {
+    private static Tasukaru instance = null;
 
     private FastLogger log;
     private TLogic tlogic;
@@ -23,6 +18,22 @@ public class Tasukaru extends CaffeinatedPlugin {
     public Tasukaru() {
         super();
         log = this.getLogger();
+        if(instance != null) {
+            log.warn("THROWING EXCEPTION FOR DUPLICATE TASUKARU");
+            throw new RuntimeException("use Tasukaru.instance(), DO NOT CONSTRUCT THIS A SECOND TIME :3");
+        }
+        instance = this;
+    }
+
+    /**
+     * use this singleton dont construct another
+     * @return THE ONE TASUKARU
+     */
+    public static Tasukaru instance() {
+        if(instance == null) {
+            instance = new Tasukaru();
+        }
+        return instance;
     }
 
     @Override
@@ -30,46 +41,36 @@ public class Tasukaru extends CaffeinatedPlugin {
         log.debug("Tasukaru onInit()");
         log.info("Hello World!");
 
-        // file setup
-        String tDir;
-        try {
-            tDir = initPluginDir("tasukaru");
-        } catch (IOException e) {
-            log.severe("Tasukaru unable to initialize plugin directory. Init aborted.");
-            e.printStackTrace();
-            return;
-        }
-
-        // settings applet
+        //TODO settings applet
         //this.createSettingsApplet(); 
 
         // database init
-        vb = new VBHandler(log, tDir + "/");
-        vb.run();
+        vb = VBHandler.instance();
+        vb.begin();
 
         // controller init
-        tlogic = new TLogic(log, vb);
+        tlogic = TLogic.instance();
 
         // listener init
-        tlist = new TListener(log, tlogic);
+        tlist = TListener.instance();
         addKoiListener(tlist);
 
         // maintenance thread
         
-        AsyncTask.createNonDaemon(() -> {
-            try {
-                log.info("DB maintenance thread init");
-                // TODO implement backups
-                TLogic.updatePlatforms(log, vb);
-                TLogic.fillAccountTableHoles(log, vb);
-            } catch(Exception e) {
-                log.severe("Exception running async thread!\n" + e.getMessage());
-                log.severe(e.getStackTrace());
-            } catch(Throwable t) {
-                log.severe("Throwable thrown running async thread!\n" + t.getMessage());
-                log.severe(t.getStackTrace());
-            }
-        });
+        // AsyncTask.createNonDaemon(() -> {
+        //     try {
+        //         log.info("DB maintenance thread init");
+        //         // TODO implement backups
+        //         tlogic.updatePlatforms();
+        //         tlogic.fillAccountTableHoles();
+        //     } catch(Exception e) {
+        //         log.severe("Exception running async thread!\n" + e.getMessage());
+        //         log.severe(e.getStackTrace());
+        //     } catch(Throwable t) {
+        //         log.severe("Throwable thrown running async thread!\n" + t.getMessage());
+        //         log.severe(t.getStackTrace());
+        //     }
+        // });
     }
 
     @Override
@@ -80,47 +81,6 @@ public class Tasukaru extends CaffeinatedPlugin {
         log.debug("Tasukaru onClose()");
 
         log.info("Tasukaru is leaving bye!");
-    }
-
-    private String initPluginDir(String plugin) throws IOException {
-        String wDir = System.getProperty("user.dir");
-        log.debug("Working Directory reported as: " + wDir);
-        Path wPath = Paths.get(wDir);
-        Path cPath = wPath.getParent();
-        String cDir;
-        try {
-            cDir = cPath.toRealPath().toString();
-        } catch (IOException e) {
-            log.severe("Plugin unable to initialize properly due to inability to: find casterlabs base path.");
-            throw e;
-        }
-        log.debug("Casterlabs-Caffeinated directory reported as: " + cDir);
-        String pDir = cDir + "/plugins";
-        Path pPath = Paths.get(pDir);
-        String tDir;
-        try {
-            tDir = pPath.toRealPath().toString() + "/" + plugin;
-        } catch (IOException e) {
-            log.severe(
-                    "Plugin unable to initialize properly due to inability to: find plugin directory path.");
-            throw e;
-        }
-        Path tPath = Paths.get(tDir);
-
-        if (!Files.isDirectory(tPath)) {
-            log.warn("Unable to find " + plugin + " plugin directory: " + tDir);
-            // create folder
-            log.info("Creating " + plugin + " plugin directory: " + tDir);
-            try {
-                Files.createDirectories(tPath);
-            } catch (IOException e) {
-                log.severe(
-                        "Plugin unable to initialize properly due to inability to: create " + plugin + " directory: "
-                                + tDir);
-                throw e;
-            }
-        }
-        return tDir;
     }
 
     @Override

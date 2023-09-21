@@ -18,20 +18,20 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @ToString
-public class InsertQuery implements Query {
+public class InsertIntoQuery implements Query {
     public String into;
     public List<Param> params; 
 
-    public InsertQuery() {
+    public InsertIntoQuery() {
         params = new ArrayList<>();
     }
 
-    public InsertQuery into(String into) {
+    public InsertIntoQuery insertInto(String into) {
         this.into = into;
         return this;
     }
 
-    public InsertQuery values(List<Param> params) {
+    public InsertIntoQuery values(List<Param> params) {
         this.params.addAll(params);
         return this;
     }

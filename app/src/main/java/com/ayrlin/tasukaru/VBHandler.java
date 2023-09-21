@@ -1,50 +1,63 @@
 package com.ayrlin.tasukaru;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.ayrlin.sqlutil.ActiveResult;
-import com.ayrlin.sqlutil.SQLUtil;
-import com.ayrlin.sqlutil.query.AlterTableQuery;
-import com.ayrlin.sqlutil.query.SelectQuery;
-import com.ayrlin.sqlutil.query.data.DataType;
-import com.ayrlin.sqlutil.query.data.OpParam;
-import com.ayrlin.sqlutil.query.data.Param;
+import com.ayrlin.sqlutil.*;
+import com.ayrlin.sqlutil.query.*;
+import com.ayrlin.sqlutil.query.data.*;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
-import com.ayrlin.sqlutil.query.data.Col;
+import com.ayrlin.tasukaru.data.AccountInfo;
+import com.ayrlin.tasukaru.data.EventInfo;
 
+import lombok.Getter;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
+
 public class VBHandler {
-    public static final String vbVersion = "1.0.0";
-
-    private static Connection con;
-    private static boolean initd = false;
+    private static final @Getter String vbVersion = "1.0.0";
+    private static VBHandler instance;
     
+    private Connection con;
     private FastLogger log;
-    private String tDir;
+    private @Getter String tskrDir;
 
-    public VBHandler(FastLogger fl, String td) {
-        log = fl;
-        tDir = td;
+    private VBHandler() {
+        this.log = Tasukaru.instance().getLogger();
+        this.tskrDir = initPluginDir("tasukaru");
     }
 
-    public void run() {
-        try {
-            getConnection();
-            initialise();
-        } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"exception during run init");
-        }
+    /**
+     * singleton pattern
+     * @return THE VBHandler
+     */
+    public static VBHandler instance() {
+        if(instance == null) {
+            instance = new VBHandler();
+        } 
+        return instance;
     }
 
-    private void getConnection() {
+    public void begin() {
+        getConnection();
+        log.trace("VBHandler is initializing.");
+        VBMaintainer vbm = VBMaintainer.instance(log);
+        vbm.begin();
+        //initialize()
+    }
+
+    public Connection getConnection() {
+        if(con != null) return con;
         // sqlite driver
         try {
             Class.forName("org.sqlite.JDBC");
-            String conPath = "jdbc:sqlite://" + tDir + "ViewerBase.db";
+            String conPath = "jdbc:sqlite://" + tskrDir + "ViewerBase.db";
             log.debug("Attempting to connect to DB at: " + conPath);
             con = DriverManager.getConnection(conPath);
             con.setAutoCommit(true);
@@ -55,161 +68,56 @@ public class VBHandler {
             log.warn("couldnt connect to the viewerbase DB");
             SQLUtil.SQLExHandle(e,"exception while connecting to DB");
         }
+        return con;
     }
 
-    private void initialise() throws SQLException {
-        if (!initd) {
-            initd = true;
 
-            String checkSQLBegin = "SELECT name FROM sqlite_master WHERE type='table' AND name='";
-            String checkSQLEnd = "'";
+    private String initPluginDir(String plugin) {
+        String wDir = System.getProperty("user.dir");
+        log.debug("Working Directory reported as: " + wDir);
+        Path wPath = Paths.get(wDir);
+        Path cPath = wPath.getParent();
+        String cDir = "ERROR";
+        try {
+            cDir = cPath.toRealPath().toString();
+        } catch (IOException e) {
+            log.severe("Plugin unable to initialize properly due to inability to: find casterlabs base path.");
+        }
+        log.debug("Casterlabs-Caffeinated directory reported as: " + cDir);
+        String pDir = cDir + "\\plugins";
+        Path pPath = Paths.get(pDir);
+        String tDir = "ERROR";
+        try {
+            tDir = pPath.toRealPath().toString() + "\\" + plugin;
+        } catch (IOException e) {
+            log.severe("Plugin unable to initialize properly due to inability to: find plugin directory path.");
+        }
+        Path tPath = Paths.get(tDir);
 
-            // META
-            if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "meta" + checkSQLEnd)
-                    .next()) {
-                log.warn("No Meta table found, creating new Meta table.");
-                createMetaTable();
-            }
-            String checkVersion = "SELECT value FROM `meta` WHERE property = \"version\";";
-            ResultSet versionCheckResult = con.createStatement().executeQuery(checkVersion);
-            if(!versionCheckResult.next()) {
-                log.severe("malformed meta table has no version");
-            } else {
-                String readVersion = versionCheckResult.getString("value"); 
-                if(!readVersion.equals(vbVersion)) {
-                    log.warn("Mismatched versions! Database reports as version " + readVersion + ", plugin version is " + vbVersion + "!");
-                    //TODO update DB to current version, including backup
-                }
-            }
-
-            // ACCOUNT SNAPSHOT
-            if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "snapshots" + checkSQLEnd)
-                    .next()) {
-                log.warn("No Account Snapshot table found, creating new Account Snapshot table.");
-                createSnapshotTable();
-            }
-
-            // ACCOUNTS
-            if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "accounts" + checkSQLEnd)
-                    .next()) {
-                log.warn("No Accounts table found, creating new Accounts table.");
-                createAccountTable();
-            }
-
-            // VIEWERS
-            if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "viewers" + checkSQLEnd)
-                    .next()) {
-                log.warn("No Viewers table found, creating new Viewers table.");
-                createViewersTable();
-            }
-
-            // HISTORY
-            if (!con.createStatement()
-                    .executeQuery(checkSQLBegin + "history" + checkSQLEnd)
-                    .next()) {
-                log.warn("No History table found, creating new History table.");
-                createHistoryTable();
+        if (!Files.isDirectory(tPath)) {
+            log.warn("Unable to find " + plugin + " plugin directory: " + tDir);
+            // create folder
+            log.info("Creating " + plugin + " plugin directory: " + tDir);
+            try {
+                Files.createDirectories(tPath);
+            } catch (IOException e) {
+                log.severe("Plugin unable to initialize properly due to inability to: create " + plugin + " directory: " + tDir);
             }
         }
-    }
-
-    private void createMetaTable() throws SQLException {
-        // meta table definition
-        con.createStatement().executeUpdate("CREATE TABLE `meta` ("
-                + "property TEXT PRIMARY KEY,"
-                + "value TEXT"
-                + ");");
-        con.createStatement().executeUpdate("insert into meta values(\"version\",\"" + vbVersion + "\");");
-    }
-
-    private void createSnapshotTable() throws SQLException {
-        // snapshots table definition
-        con.createStatement().executeUpdate("CREATE TABLE `snapshots` ("
-                + "id INTEGER PRIMARY KEY,"
-                + "aid INTEGER NOT NULL,"
-                + "userId TEXT," // koi.api.types.user.User.id
-                + "channelId TEXT,"
-                + "platform TEXT," // koi.api.types.user.User.platform.name
-                + "UPID TEXT,"
-                + "roles TEXT," // list UserRoles
-                + "badges TEXT," // list String
-                + "color TEXT,"
-                + "username TEXT,"
-                + "displayname TEXT,"
-                + "bio TEXT,"
-                + "link TEXT,"
-                + "imageLink TEXT,"
-                + "followersCount INTEGER,"
-                + "subCount INTEGER,"
-                + "FOREIGN KEY (aid) REFERENCES `accounts` (id)"
-                + ");");
-    }
-
-    private void createAccountTable() throws SQLException {
-        // accounts table definition
-        con.createStatement().executeUpdate("CREATE TABLE `accounts` (" 
-                + "id INTEGER PRIMARY KEY,"
-                + "latestSnapshot INTEGER,"
-                + "userId TEXT," // koi.api.types.user.User.id
-                + "channelId TEXT,"
-                + "platform TEXT," // koi.api.types.user.User.platform.name
-                + "UPID TEXT,"
-                + "roles TEXT," // list UserRoles
-                + "badges TEXT," // list String
-                + "color TEXT,"
-                + "username TEXT,"
-                + "displayname TEXT,"
-                + "bio TEXT,"
-                + "link TEXT,"
-                + "imageLink TEXT,"
-                + "followersCount INTEGER,"
-                + "subCount INTEGER,"
-                + "FOREIGN KEY (latestSnapshot) REFERENCES `snapshots` (id)"
-                + ");");
-    }
-
-    private void createViewersTable() throws SQLException {
-        // accounts table definition
-        con.createStatement().executeUpdate("CREATE TABLE `viewers` (" 
-                + "id INTEGER PRIMARY KEY,"
-                + "watchtime INTEGER,"
-                + "points INTEGER"
-                + ");");
-    }
-
-    private void createHistoryTable() throws SQLException {
-        // history table definition
-        con.createStatement().executeUpdate("CREATE TABLE `history` ("
-                + "id INTEGER PRIMARY KEY,"
-                + "aid INTEGER NOT NULL," // foreign key accounts
-                + "sid INTEGER NOT NULL," // foreign key snapshots
-                + "uptype TEXT NOT NULL," // present, absent, technical
-                + "action TEXT,"
-                + "value INTEGER,"
-                + "timestamp TEXT,"
-                + "streamstate TEXT,"
-                + "FOREIGN KEY (aid) REFERENCES `accounts` (id)"
-                + "FOREIGN KEY (sid) REFERENCES `snapshots` (id)"
-                + ");");
+        return tDir + "\\";
     }
 
     ///////////////// VB ACTIONS //////////////////
 
     public int addAccount(AccountInfo vi) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.debug("Adding Account: \n" + vi);
 
         List<Param> params = new ArrayList<>();
         params.add(new Param(DataType.INT, "latestSnapshot", -1)); //default
         params.add(new Param(DataType.STRING, "userId", vi.userId));
         params.add(new Param(DataType.STRING, "channelId", vi.channelId));
-        params.add(new Param(DataType.STRING, "platform", vi.platform));
+        params.add(new Param(DataType.STRING, "platform", vi.getPlatform()));
         params.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
         params.add(new Param(DataType.STRING, "roles", vi.getRoles()));
@@ -242,9 +150,7 @@ public class VBHandler {
     }
 
     public boolean updateAccount(AccountInfo vi) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.debug("Updating Account info: " + vi);
         
         addSnapshot(vi);
@@ -254,7 +160,7 @@ public class VBHandler {
         setParams.add(new Param(DataType.INT, "latestSnapshot", vi.latestSnapshot));
         setParams.add(new Param(DataType.STRING, "userId", vi.userId));
         setParams.add(new Param(DataType.STRING, "channelId", vi.channelId));
-        setParams.add(new Param(DataType.STRING, "platform", vi.platform));
+        setParams.add(new Param(DataType.STRING, "platform", vi.getPlatform()));
         setParams.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
         setParams.add(new Param(DataType.STRING, "roles", vi.getRoles()));
@@ -284,9 +190,7 @@ public class VBHandler {
      * @return the snapshot id, equal to vi.latestSnapshot
      */
     public int addSnapshot(AccountInfo vi) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.debug("Adding account snapshot for Account: \n" + vi);
 
         if (vi.id <= 0) {
@@ -303,7 +207,7 @@ public class VBHandler {
         params.add(new Param(DataType.INT, "aid", vi.id));
         params.add(new Param(DataType.STRING, "userId", vi.userId));
         params.add(new Param(DataType.STRING, "channelId", vi.channelId));
-        params.add(new Param(DataType.STRING, "platform", vi.platform));
+        params.add(new Param(DataType.STRING, "platform", vi.getPlatform()));
         params.add(new Param(DataType.STRING, "UPID", vi.UPID));
 
         params.add(new Param(DataType.STRING, "roles", vi.getRoles()));
@@ -336,9 +240,7 @@ public class VBHandler {
     }
 
     public int addHistory(EventInfo ei) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         if (ei.timestamp == null) {
             ei.timestamp = new java.sql.Timestamp(new java.util.Date().getTime());
         }
@@ -366,9 +268,7 @@ public class VBHandler {
      *         -2 if errored
      */
     public int findAccountId(AccountInfo vi) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.trace("searching for id of Account: \n" + vi);
 
         List<OpParam> whereList = new ArrayList<>();
@@ -376,8 +276,8 @@ public class VBHandler {
         // determine most reliable info
         if (!vi.UPID.isEmpty()) {
             whereList.add(new OpParam(DataType.STRING, "UPID", Op.EQUAL, vi.UPID));
-        } else if (!vi.platform.isEmpty()) {
-            whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, vi.platform));
+        } else if (vi.platform != null) {
+            whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, vi.getPlatform()));
             if (!vi.userId.isEmpty()) {
                 whereList.add(new OpParam(DataType.STRING, "userId", Op.EQUAL, vi.userId));
             } else if (!vi.username.isEmpty()) {
@@ -415,9 +315,7 @@ public class VBHandler {
     }
 
     public AccountInfo retrieveCurrentAccountInfo(long id) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.trace("retrieving current Account info.");
 
         ActiveResult ar = new SelectQuery()
@@ -466,9 +364,7 @@ public class VBHandler {
 
     public List<Long> listAllAccounts() {
         List<Long> ids = new ArrayList<>();
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.trace("listing all Accounts");
 
         ActiveResult ar = new SelectQuery().select("id").from("accounts").execute(con);
@@ -485,9 +381,7 @@ public class VBHandler {
     }
 
     public int findLatestSnapshot(int aid) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.trace("searching for id of latest snapshot for Account with id: " + aid);
 
         int sid = -1;
@@ -511,9 +405,7 @@ public class VBHandler {
     }
 
     public Param findLastSnapshotValue(int aid, Param toFind) {
-        if (con == null) {
-            getConnection();
-        }
+        getConnection();
         log.trace("finding last value of " + toFind + " for Account " + aid + " in snapshot records.");
 
         Object value = null;

@@ -1,5 +1,8 @@
 package com.ayrlin.tasukaru;
 
+import com.ayrlin.tasukaru.data.AccountInfo;
+import com.ayrlin.tasukaru.data.EventInfo;
+
 import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
 import co.casterlabs.caffeinated.pluginsdk.koi.Koi;
 import co.casterlabs.koi.api.listener.*;
@@ -7,15 +10,27 @@ import co.casterlabs.koi.api.types.events.*;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TListener implements KoiEventListener {
+    private static TListener instance;
 
     private FastLogger log;
     private TLogic tl;
-    private Koi koi = Caffeinated.getInstance().getKoi();
+    private Koi koi; ;
 
-    public TListener(FastLogger fl, TLogic tl) {
-        log = fl;
-        this.tl = tl;
-        log.debug("Tasukaru()");
+    private TListener() {
+        this.log = Tasukaru.instance().getLogger();
+        this.tl = TLogic.instance();
+        this.koi = Caffeinated.getInstance().getKoi();
+    }
+
+    /**
+     * singleton
+     * @return THE TListener
+     */
+    public static TListener instance() {
+        if(instance == null) {
+            instance = new TListener();
+        }
+        return instance;
     }
 
     @KoiEventHandler

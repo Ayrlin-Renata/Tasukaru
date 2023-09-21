@@ -37,7 +37,7 @@ public class SQLUtil {
      * @return generated keys, -1 if failed to execute, -2 if query unsuccessful, -3 if key unable to be retrieved.
      */
     public static long insert(Connection con, String table, List<Param> params) {
-        return new InsertQuery().into(table).values(params).execute(con);
+        return new InsertIntoQuery().insertInto(table).values(params).execute(con);
     }
 
     /**
@@ -52,6 +52,29 @@ public class SQLUtil {
         return new UpdateQuery().update(table).set(setValues).where(matchConditions).execute(con);
     }
 
+    public static boolean existsCheck(Connection con, String table) {
+        FastLogger.logStatic(LogLevel.TRACE, "checking master table for table " + table + " existance");
+        List<OpParam> match = new ArrayList<>();
+        match.add(new OpParam(DataType.STRING, "type", Op.EQUAL, "table"));
+        match.add(new OpParam(DataType.STRING, "name", Op.EQUAL, table));
+
+        SelectQuery q = new SelectQuery().select("name").from("sqlite_master").where(match).limit(1);
+        ActiveResult ar = q.execute(con);
+        try {
+            if(ar.hasNull() || !ar.rs.next()) {
+                FastLogger.logStatic(LogLevel.WARNING, "exists check failed for query: \n" + q);
+                return false;
+            }
+            FastLogger.logStatic(LogLevel.DEBUG, "Exists check for table " + table + " success!");
+        } catch(SQLException e) {
+            SQLExHandle(e, "SQLException during sanity check for query: \n" + q);
+            return false;
+        } finally {
+            ar.close();
+        }
+        return true;
+    }
+
     /**
      * for making the WHERE part of a query actually returns results
      * @param con
@@ -60,8 +83,8 @@ public class SQLUtil {
      * @return true if it does (ResultSet.next() is true)
      */
     public static boolean sanityCheck(Connection con, String table, List<OpParam> matchConditions) {
-        List<Param> all = retrieveColumnNames(con, table);
-        SelectQuery q = new SelectQuery().select(all).from(table).where(matchConditions);
+        //List<Param> all = retrieveColumnNames(con, table);
+        SelectQuery q = new SelectQuery().select("*").from(table).where(matchConditions).limit(1);
         ActiveResult ar = q.execute(con);
         try {
             if(ar.hasNull() || !ar.rs.next()) {
@@ -170,19 +193,17 @@ public class SQLUtil {
         return lid;
     }
 
-    public static List<Param> retrieveColumnNames(Connection con, String table) {
-        ArrayList<Param> name = new ArrayList<>();
-        name.add(new Param(DataType.STRING,"name",""));
-        SelectQuery q = new SelectQuery().select(name).from("pragma_table_info('" + table + "')");
+    public static List<SCol> retrieveColumnNames(Connection con, String table) {
+        SelectQuery q = new SelectQuery().select("name").from("pragma_table_info('" + table + "')");
         ActiveResult ar = q.execute(con); 
         if(ar.hasNull()) {
             FastLogger.logStatic(LogLevel.SEVERE, "cannot retrieve column names for table " + table);
             return null;
         }
-        List<Param> cols = new ArrayList<>();
+        List<SCol> cols = new ArrayList<>();
         try {
             while (ar.rs.next()) {
-                cols.add(new Param(DataType.STRING,ar.rs.getString("name"),""));
+                cols.add(new SCol(ar.rs.getString("name"), DataType.STRING));
             }
             ar.close();
         } catch(SQLException e) {

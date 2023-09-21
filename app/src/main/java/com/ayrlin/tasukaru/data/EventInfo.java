@@ -1,4 +1,4 @@
-package com.ayrlin.tasukaru;
+package com.ayrlin.tasukaru.data;
 
 import java.sql.Timestamp;
 

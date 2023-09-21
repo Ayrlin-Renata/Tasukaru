@@ -1,27 +1,35 @@
 package com.ayrlin.tasukaru;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.ayrlin.tasukaru.data.EventInfo;
 
-import com.ayrlin.sqlutil.query.data.Param;
-
-import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TLogic {
-    FastLogger log;
-    VBHandler vb;
+    private static TLogic instance;
+    private FastLogger log;
+    private VBHandler vb;
 
-    public TLogic(FastLogger log, VBHandler vb) {
-        this.log = log;
-        this.vb = vb;
+    private TLogic() {
+        this.log = Tasukaru.instance().getLogger();
+        this.vb = VBHandler.instance();
+    }
+
+    /**
+     * singleton
+     * @return THE TLogic
+     */
+    public static TLogic instance() {
+        if(instance == null) {
+            instance = new TLogic();
+        }
+        return instance;
     }
 
     public boolean incoming(EventInfo ei) {
         log.debug("processing " + ei.uptype + " event for " + ei.action + " of " + ei.account.displayname);
         log.trace(ei);
 
-        // find or add viewer
+        // find or add account
         int accountId = vb.findAccountId(ei.account);
         if (accountId == -2) {
             log.severe("aborting incoming event: error finding viewer id for event: \n" + ei);
@@ -50,6 +58,7 @@ public class TLogic {
             } 
             ei.snapshotId = vb.findLatestSnapshot(ei.account.id);
         }
+        //TODO find or add viewer
 
         // follow through with event actions
         if (processEventActions(ei)) {
@@ -59,38 +68,6 @@ public class TLogic {
         }
         // if failure to process actions, incoming failed
         return false;
-    }
-
-    public static void updatePlatforms(FastLogger log, VBHandler vb) {
-        log.trace("Updating platforms for viewers table.");
-        List<String> cols = new ArrayList<>();
-        for (UserPlatform plat : UserPlatform.values()) {
-            if(plat == UserPlatform.CASTERLABS_SYSTEM || plat == UserPlatform.CUSTOM_INTEGRATION) {
-                continue; //these are for system messages and integrations like Ko-Fi
-            }
-            cols.add(plat.name());
-        }
-        log.debug("Found supported CL platforms: \n" + cols);
-        vb.checkAddCols(log, cols);
-    }
-
-    public static void fillAccountTableHoles(FastLogger log, VBHandler vb) {
-        //find holes
-        List<Long> aids = vb.listAllAccounts();
-        for (long aid : aids) {
-            log.trace("filling holes for viewer " + aid);
-            AccountInfo vi = vb.retrieveCurrentAccountInfo(aid);
-            List<Param> missingList = vi.listUnfilledValues();
-            if(missingList.isEmpty()) continue;
-            for (Param p : missingList) {
-                Param sp = vb.findLastSnapshotValue(vi.id, p);
-                if(sp.value != null) {
-                    vi.modifyFromParameter(sp);
-                }
-            }
-            vb.updateAccount(vi);
-        }
-        log.debug("hole filling complete.");
     }
 
     private boolean processEventActions(EventInfo ei) {

@@ -1,4 +1,4 @@
-package com.ayrlin.tasukaru;
+package com.ayrlin.tasukaru.data;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,6 +9,7 @@ import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.Param;
 
 import co.casterlabs.koi.api.types.user.User;
+import co.casterlabs.koi.api.types.user.UserPlatform;
 import co.casterlabs.koi.api.types.user.User.UserRoles;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.TypeToken;
@@ -25,7 +26,7 @@ public class AccountInfo {
     private static final int DEFAULT_latestSnapshot = INT_DEFAULT;
     private static final String DEFAULT_userId = STRING_DEFAULT; // similar to koi.api.types.user.User.id
     private static final String DEFAULT_channelId = STRING_DEFAULT;
-    private static final String DEFAULT_platform = STRING_DEFAULT;
+    private static final UserPlatform DEFAULT_platform = null;
     private static final String DEFAULT_UPID = STRING_DEFAULT;
     private static final List<UserRoles> DEFAULT_roles = new ArrayList<>();
     private static final List<String> DEFAULT_badges = new ArrayList<>();
@@ -42,7 +43,7 @@ public class AccountInfo {
     public int latestSnapshot;
     public String userId; // similar to koi.api.types.user.User.id
     public String channelId;
-    public String platform;
+    public UserPlatform platform;
     public String UPID;
     public List<UserRoles> roles;
     public List<String> badges;
@@ -78,7 +79,7 @@ public class AccountInfo {
         this();
         this.userId = user.getId();
         this.channelId = user.getChannelId();
-        this.platform = user.getPlatform().name();
+        this.platform = user.getPlatform();
         this.UPID = user.getUPID();
         this.roles = user.getRoles();
         this.badges = user.getBadges();
@@ -113,8 +114,11 @@ public class AccountInfo {
         return this;
     }
 
-    public AccountInfo platform(String platformname) {
-        this.platform = platformname;
+    public AccountInfo platform(String platformName) {
+        return platform(UserPlatform.valueOf(platformName));
+    }
+    public AccountInfo platform(UserPlatform platform) {
+        this.platform = platform;
         return this;
     }
 
@@ -195,6 +199,10 @@ public class AccountInfo {
         return this;
     }
 
+    public String getPlatform() {
+        return platform.name();
+    }
+
     public String getRoles() {
         return Rson.DEFAULT.toJson(roles).toString();
     }
@@ -213,7 +221,7 @@ public class AccountInfo {
         if(this.latestSnapshot == DEFAULT_latestSnapshot) this.latestSnapshot = base.latestSnapshot;
         if(this.userId.isEmpty()) this.userId = base.userId;
         if(this.channelId.isEmpty()) this.channelId = base.channelId;
-        if(this.platform.isEmpty()) this.platform = base.platform;
+        if(this.platform == null) this.platform = base.platform;
         if(this.UPID.isEmpty()) this.UPID = base.UPID;
         if(this.roles.isEmpty()) this.roles(base.roles);
         if(this.badges.isEmpty()) this.badges(base.badges);
@@ -297,7 +305,7 @@ public class AccountInfo {
             switch(sp.column) {
                 case "userId" : userId((String) value); break;
                 case "channelId" : channelId((String) value); break;
-                case "platform" : platform((String) value); break;
+                case "platform" : platform(UserPlatform.valueOf(value)); break;
                 case "UPID" : upid((String) value); break;
                 case "roles" : roles((String) value); break;
                 case "badges" : badges((String) value); break;
