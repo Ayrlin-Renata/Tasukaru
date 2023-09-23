@@ -11,9 +11,6 @@ public class Tasukaru extends CaffeinatedPlugin {
     private static Tasukaru instance = null;
 
     private FastLogger log;
-    private TLogic tlogic;
-    private TListener tlist;
-    private VBHandler vb;
 
     public Tasukaru() {
         super();
@@ -39,38 +36,16 @@ public class Tasukaru extends CaffeinatedPlugin {
     @Override
     public void onInit() {
         log.debug("Tasukaru onInit()");
-        log.info("Hello World!");
+        log.info("I'm saved :3");
 
         //TODO settings applet
         //this.createSettingsApplet(); 
 
         // database init
-        vb = VBHandler.instance();
-        vb.begin();
+        VBHandler.instance().begin();
 
-        // controller init
-        tlogic = TLogic.instance();
-
-        // listener init
-        tlist = TListener.instance();
-        addKoiListener(tlist);
-
-        // maintenance thread
-        
-        // AsyncTask.createNonDaemon(() -> {
-        //     try {
-        //         log.info("DB maintenance thread init");
-        //         // TODO implement backups
-        //         tlogic.updatePlatforms();
-        //         tlogic.fillAccountTableHoles();
-        //     } catch(Exception e) {
-        //         log.severe("Exception running async thread!\n" + e.getMessage());
-        //         log.severe(e.getStackTrace());
-        //     } catch(Throwable t) {
-        //         log.severe("Throwable thrown running async thread!\n" + t.getMessage());
-        //         log.severe(t.getStackTrace());
-        //     }
-        // });
+        // listener registration
+        addKoiListener(TListener.instance());
     }
 
     @Override

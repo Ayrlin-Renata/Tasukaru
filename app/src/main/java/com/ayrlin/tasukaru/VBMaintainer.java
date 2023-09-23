@@ -1,23 +1,25 @@
 package com.ayrlin.tasukaru;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.ayrlin.sqlutil.ActiveResult;
-import com.ayrlin.sqlutil.SQLUtil;
-import com.ayrlin.sqlutil.query.InsertIntoQuery;
-import com.ayrlin.sqlutil.query.SelectQuery;
-import com.ayrlin.sqlutil.query.data.Col;
-import com.ayrlin.sqlutil.query.data.DataType;
-import com.ayrlin.sqlutil.query.data.OpParam;
-import com.ayrlin.sqlutil.query.data.Table;
+import com.ayrlin.sqlutil.*;
+import com.ayrlin.sqlutil.query.*;
+import com.ayrlin.sqlutil.query.data.*;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
-import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.vbdefs.VBTables;
 
@@ -59,7 +61,11 @@ public class VBMaintainer {
             log.severe("unable to determine VB version!");
             //return false;
             updateVersionNumber(); //temp 
-            //TODO move existing VB, create new
+            if(!backupVB()) {
+                log.severe("Could not backup VB for replacement. aborting maintenance cycle!");
+                return false;
+            }
+            //TODO VB, create new
         }
         if(!ver.equals(VBHandler.getVbVersion())) {
             log.warn("Mismatched versions! Database reports as version " + ver + ", plugin version is " + VBHandler.getVbVersion() + "!");
@@ -73,9 +79,65 @@ public class VBMaintainer {
         return true;
     }
 
+
     public boolean backupVB() {
-        //TODO Backups
-        return true; //pass check for now temp
+        log.trace("backing up VB...");
+        //String errMsg = "Plugin Tasukaru unable to backup Viewerbase. Don't worry about it, except if this keeps happenning consistantly, then please contact ayrlin on discord to get it fixed. You can find the specific error by searching for the most recent `unable to backup VB!` in `app.log`.";
+
+        String dateString = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd'T'HH_mm_ss")
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.now());
+
+        String dirString = VBHandler.instance().getTskrDir() + "VBBackups";
+        String vbname = VBHandler.getVbFilename().substring(0, VBHandler.getVbFilename().length()-3);
+        String backupString = VBHandler.instance().getTskrDir() + "VBBackups\\" + vbname + "." + dateString + ".bak.db";
+        Path dirPath = Paths.get(dirString);
+
+        if (!Files.exists(dirPath)) {
+            try {
+                Files.createDirectories(dirPath);
+            } catch (IOException e) {
+                log.warn("unable to backup VB!"); 
+                e.printStackTrace();
+                //TODO Caffeinated.notify(errMsg);
+                return false;
+            }
+        }
+
+        //make sure file is unique
+        long index = 0;
+        String ts = backupString;
+        Path tp = Paths.get(ts);
+        while (Files.exists(tp)) {
+            ts = backupString + "." + ++index;
+            tp = Paths.get(ts);
+        }
+
+        //copy file
+        Path backupPath = tp;
+        String origString = VBHandler.instance().getTskrDir() + VBHandler.getVbFilename();
+        Path origPath = Paths.get(origString);
+        boolean retry = true;
+        try {
+            Files.copy(origPath, backupPath, StandardCopyOption.ATOMIC_MOVE);
+            retry = false;
+        } catch (IOException | UnsupportedOperationException e) {
+            log.warn("unable to complete atomic copy for VB backup!"); 
+            e.printStackTrace();
+        }
+        try {
+            if(retry) Files.copy(origPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e1) {
+            log.severe("unable to complete copy for VB backup!"); 
+            e1.printStackTrace();
+            //Caffeinated.notify(errMsg);
+            return false;
+        }
+
+        //TODO backup max size and cull backups
+        log.debug("backed up! Copied " + origString + " to " + backupString);
+        return true; 
     }
 
     public String getVersion() {

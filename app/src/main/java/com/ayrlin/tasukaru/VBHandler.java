@@ -22,6 +22,7 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class VBHandler {
     private static final @Getter String vbVersion = "1.0.0";
+    private static final @Getter String vbFilename = "ViewerBase.db";
     private static VBHandler instance;
     
     private Connection con;
@@ -57,7 +58,7 @@ public class VBHandler {
         // sqlite driver
         try {
             Class.forName("org.sqlite.JDBC");
-            String conPath = "jdbc:sqlite://" + tskrDir + "ViewerBase.db";
+            String conPath = "jdbc:sqlite://" + tskrDir + vbFilename;
             log.debug("Attempting to connect to DB at: " + conPath);
             con = DriverManager.getConnection(conPath);
             con.setAutoCommit(true);
