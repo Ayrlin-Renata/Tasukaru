@@ -4,6 +4,9 @@
 package com.ayrlin.tasukaru;
 
 import co.casterlabs.caffeinated.pluginsdk.*;
+import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsItem;
+import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsLayout;
+import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsSection;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @CaffeinatedPluginImplementation
@@ -38,8 +41,9 @@ public class Tasukaru extends CaffeinatedPlugin {
         log.debug("Tasukaru onInit()");
         log.info("I'm saved :3");
 
-        //TODO settings applet
-        //this.createSettingsApplet(); 
+        //settings applet
+        this.createSettingsApplet();
+        this.renderSettingsLayout();
 
         // database init
         VBHandler.instance().begin();
@@ -48,13 +52,14 @@ public class Tasukaru extends CaffeinatedPlugin {
         addKoiListener(TListener.instance());
     }
 
+    
     @Override
     /**
      * triggers when user unloads the plugin, NOT on application close
      */
     public void onClose() {
         log.debug("Tasukaru onClose()");
-
+        
         log.info("Tasukaru is leaving bye!");
     }
 
@@ -62,10 +67,17 @@ public class Tasukaru extends CaffeinatedPlugin {
     public String getName() {
         return "Tasukaru";
     }
-
+    
     @Override
     public String getId() {
         return "com.ayrlin.tasukaru";
     }
-
+    
+    private void renderSettingsLayout() {
+        WidgetSettingsLayout tLayout = new WidgetSettingsLayout();
+        WidgetSettingsSection sectionPoints = new WidgetSettingsSection("points","tskr points")
+                .addItem(WidgetSettingsItem.asNumber("points_message", "points per message", 0, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        tLayout.addSection(sectionPoints);
+        this.setSettingsLayout(tLayout);
+    }
 }

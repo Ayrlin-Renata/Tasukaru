@@ -7,9 +7,14 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ayrlin.sqlutil.query.*;
-import com.ayrlin.sqlutil.query.data.*;
+import com.ayrlin.sqlutil.query.InsertIntoQuery;
+import com.ayrlin.sqlutil.query.SelectQuery;
+import com.ayrlin.sqlutil.query.UpdateQuery;
+import com.ayrlin.sqlutil.query.data.DataType;
+import com.ayrlin.sqlutil.query.data.OpParam;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.Param;
+import com.ayrlin.sqlutil.query.data.SCol;
 
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
