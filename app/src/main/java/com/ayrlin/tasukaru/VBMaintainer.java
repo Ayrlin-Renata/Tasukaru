@@ -23,7 +23,6 @@ import com.ayrlin.sqlutil.query.data.OpParam.Op;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.vbdefs.VBTables;
 
-import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class VBMaintainer {
@@ -52,7 +51,7 @@ public class VBMaintainer {
      * Starts the maintenance cycle
      */
     public boolean begin() {
-        if(!backupVB()) {
+        if(!backupVB()) { // TODO exists check
             log.severe("Could not backup VB!! aborting maintenance cycle!");
             return false;
         }
@@ -61,11 +60,8 @@ public class VBMaintainer {
             log.severe("unable to determine VB version!");
             //return false;
             updateVersionNumber(); //temp 
-            if(!backupVB()) {
-                log.severe("Could not backup VB for replacement. aborting maintenance cycle!");
-                return false;
-            }
-            //TODO VB, create new
+            //TODO restore from backup, if fail create new
+            //return false;
         }
         if(!ver.equals(VBHandler.getVbVersion())) {
             log.warn("Mismatched versions! Database reports as version " + ver + ", plugin version is " + VBHandler.getVbVersion() + "!");
@@ -91,9 +87,8 @@ public class VBMaintainer {
 
         String dirString = VBHandler.instance().getTskrDir() + "VBBackups";
         String vbname = VBHandler.getVbFilename().substring(0, VBHandler.getVbFilename().length()-3);
-        String backupString = VBHandler.instance().getTskrDir() + "VBBackups\\" + vbname + "." + dateString + ".bak.db";
         Path dirPath = Paths.get(dirString);
-
+        
         if (!Files.exists(dirPath)) {
             try {
                 Files.createDirectories(dirPath);
@@ -104,13 +99,14 @@ public class VBMaintainer {
                 return false;
             }
         }
-
+        
         //make sure file is unique
+        String backupString = VBHandler.instance().getTskrDir() + "VBBackups\\" + vbname + "." + dateString;
         long index = 0;
-        String ts = backupString;
+        String ts = backupString + ".bak.db";
         Path tp = Paths.get(ts);
         while (Files.exists(tp)) {
-            ts = backupString + "." + ++index;
+            ts = backupString + "." + ++index + ".bak.db";
             tp = Paths.get(ts);
         }
 
@@ -123,7 +119,7 @@ public class VBMaintainer {
             Files.copy(origPath, backupPath, StandardCopyOption.ATOMIC_MOVE);
             retry = false;
         } catch (IOException | UnsupportedOperationException e) {
-            log.warn("unable to complete atomic copy for VB backup!"); 
+            log.debug("unable to complete atomic copy for VB backup!"); 
             e.printStackTrace();
         }
         try {
@@ -245,14 +241,7 @@ public class VBMaintainer {
 
     public void updatePlatforms() {
         log.trace("Updating platforms for viewers table.");
-        List<String> cols = new ArrayList<>();
-        for (UserPlatform plat : UserPlatform.values()) {
-            if(plat == UserPlatform.CASTERLABS_SYSTEM || plat == UserPlatform.CUSTOM_INTEGRATION) {
-                continue; //these are for system messages and integrations like Ko-Fi
-            }
-            cols.add(plat.name());
-        }
-        log.debug("Found supported CL platforms: \n" + cols);
+        List<String> cols = TLogic.instance().getSupportedPlatforms();
         VBHandler.instance().checkAddCols(log, cols);
     }
 
@@ -261,8 +250,9 @@ public class VBMaintainer {
         //find holes
         List<Long> aids = vb.listAllAccounts();
         for (long aid : aids) {
-            log.trace("filling holes for viewer " + aid);
+            log.trace("\nfilling holes for account " + aid);
             AccountInfo vi = vb.retrieveCurrentAccountInfo(aid);
+            AccountInfo origVi = new AccountInfo(vi);
             List<Param> missingList = vi.listUnfilledValues();
             if(missingList.isEmpty()) continue;
             for (Param p : missingList) {
@@ -271,7 +261,12 @@ public class VBMaintainer {
                     vi.modifyFromParameter(sp);
                 }
             }
-            vb.updateAccount(vi);
+            if(!vi.equals(origVi)) {
+                log.debug("account info was found to need updating: \nOLD: \n" + origVi + "\nNEW: \n" + vi);
+                vb.updateAccount(vi);
+            } else {
+                log.trace("account info was found to NOT need updating: \nOLD: \n" + origVi + "\nNEW: \n" + vi);
+            }
         }
         log.debug("hole filling complete.");
     }

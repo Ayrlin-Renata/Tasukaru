@@ -2,6 +2,9 @@ package com.ayrlin.tasukaru;
 
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
+import com.ayrlin.tasukaru.data.EventInfo.AAct;
+import com.ayrlin.tasukaru.data.EventInfo.PAct;
+import com.ayrlin.tasukaru.data.EventInfo.UpType;
 
 import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
 import co.casterlabs.caffeinated.pluginsdk.koi.Koi;
@@ -51,7 +54,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
         AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype("present").action("join");
+        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype(UpType.PRESENT).action(PAct.JOIN);
         tl.incoming(histEvent);
     }
 
@@ -60,7 +63,7 @@ public class TListener implements KoiEventListener {
         log.debug("Tasukaru recieved ViewerLeaveEvent.");
         log.trace(e);
         AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype("absent").action("leave");
+        EventInfo histEvent = new EventInfo().account(tskrViewerData).uptype(UpType.ABSENT).action(AAct.LEAVE);
         tl.incoming(histEvent);
     }
 
@@ -79,13 +82,14 @@ public class TListener implements KoiEventListener {
         AccountInfo tskrViewerData = new AccountInfo(e.getSender());
         EventInfo histEvent = new EventInfo()
                 .account(tskrViewerData)
-                .uptype("present")
+                .event(e)
+                .uptype(UpType.PRESENT)
                 .streamState((koi.getStreamStates().get(e.getSender().getPlatform()).isLive())? "live" : "offline"); //is the stream live rn
         if (e.getDonations().isEmpty()) {
-            histEvent = histEvent.action("message");
+            histEvent = histEvent.action(PAct.MESSAGE);
         } else {
-            histEvent = histEvent.action("donate");
-            // TODO .value(TUtil.usdValue(e.getDonations()));
+            histEvent = histEvent.action(PAct.DONATE);
+            // featurecreep .value(TUtil.usdValue(e.getDonations())); use Currencies from casterlabs util
         }
         tl.incoming(histEvent);
     }
@@ -98,8 +102,8 @@ public class TListener implements KoiEventListener {
         AccountInfo tskrViewerData = new AccountInfo(e.getFollower());
         EventInfo histEvent = new EventInfo()
                 .account(tskrViewerData)
-                .uptype("present")
-                .action("follow");
+                .uptype(UpType.PRESENT)
+                .action(PAct.FOLLOW);
         tl.incoming(histEvent);
     }
 
@@ -111,8 +115,8 @@ public class TListener implements KoiEventListener {
         AccountInfo tskrViewerData = new AccountInfo(e.getSubscriber());
         EventInfo histEvent = new EventInfo()
                 .account(tskrViewerData)
-                .uptype("present")
-                .action("subscribe");
+                .uptype(UpType.PRESENT)
+                .action(PAct.SUBSCRIBE);
         tl.incoming(histEvent);
     }
 

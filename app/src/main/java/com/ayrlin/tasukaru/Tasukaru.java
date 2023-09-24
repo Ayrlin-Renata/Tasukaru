@@ -4,9 +4,6 @@
 package com.ayrlin.tasukaru;
 
 import co.casterlabs.caffeinated.pluginsdk.*;
-import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsItem;
-import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsLayout;
-import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsSection;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @CaffeinatedPluginImplementation
@@ -43,7 +40,7 @@ public class Tasukaru extends CaffeinatedPlugin {
 
         //settings applet
         this.createSettingsApplet();
-        this.renderSettingsLayout();
+        TSettings.instance().begin();
 
         // database init
         VBHandler.instance().begin();
@@ -72,12 +69,9 @@ public class Tasukaru extends CaffeinatedPlugin {
     public String getId() {
         return "com.ayrlin.tasukaru";
     }
-    
-    private void renderSettingsLayout() {
-        WidgetSettingsLayout tLayout = new WidgetSettingsLayout();
-        WidgetSettingsSection sectionPoints = new WidgetSettingsSection("points","tskr points")
-                .addItem(WidgetSettingsItem.asNumber("points_message", "points per message", 0, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        tLayout.addSection(sectionPoints);
-        this.setSettingsLayout(tLayout);
+
+    @Override
+    protected void onSettingsUpdate() {
+        TSettings.instance().onSettingsUpdate();
     }
 }

@@ -88,7 +88,7 @@ public class SelectQuery implements Query {
         if(selectString.isEmpty()) {
             List<String> selectList = new ArrayList<>();
             for(SCol p : select) {
-                selectList.add(p.getColumn());
+                selectList.add("\"" + p.getColumn() + "\"");
             }
             selectString = String.join(", ",selectList);
         }
@@ -97,7 +97,7 @@ public class SelectQuery implements Query {
         if(!where.isEmpty()) { 
             List<String> whereList = new ArrayList<>();
             for(OpParam p : where) {
-                whereList.add(p.getColumn() + " " + p.operation.toString() + " ?");
+                whereList.add("\"" + p.getColumn() + "\" " + p.operation.toString() + " ?");
             }
             String whereString = String.join(" AND ",whereList);
             qs += " WHERE " + whereString;

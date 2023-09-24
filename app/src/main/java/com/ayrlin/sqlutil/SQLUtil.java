@@ -120,7 +120,7 @@ public class SQLUtil {
             Param p = params.get(i);
             switch(p.type) {
                 case STRING : 
-                    prep.setString(i + 1, (String)p.value); //+1 because prepared statement indexes are 1-based
+                    prep.setString(i + 1, p.value.toString()); //+1 because prepared statement indexes are 1-based
                     break;
                 case INT : 
                     prep.setLong(i + 1, Long.valueOf(p.value.toString())); //weird bc it could be an int

@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.Param;
+import com.ayrlin.tasukaru.Tasukaru;
 
 import co.casterlabs.koi.api.types.user.User;
 import co.casterlabs.koi.api.types.user.UserPlatform;
@@ -23,6 +24,7 @@ public class AccountInfo {
     public static final String STRING_DEFAULT = "";
 
     private static final int DEFAULT_id = INT_DEFAULT; // actual SQL table id
+    private static final int DEFAULT_vid = INT_DEFAULT; 
     private static final int DEFAULT_latestSnapshot = INT_DEFAULT;
     private static final String DEFAULT_userId = STRING_DEFAULT; // similar to koi.api.types.user.User.id
     private static final String DEFAULT_channelId = STRING_DEFAULT;
@@ -40,6 +42,7 @@ public class AccountInfo {
     private static final long DEFAULT_subCount = INT_DEFAULT;
 
     public int id; // actual SQL table id
+    public long vid;
     public int latestSnapshot;
     public String userId; // similar to koi.api.types.user.User.id
     public String channelId;
@@ -58,6 +61,7 @@ public class AccountInfo {
 
     public AccountInfo() {
         this.id = DEFAULT_id;
+        this.vid = DEFAULT_vid;
         this.latestSnapshot = DEFAULT_latestSnapshot;
         this.userId = DEFAULT_userId;
         this.channelId = DEFAULT_channelId;
@@ -94,8 +98,34 @@ public class AccountInfo {
         this.subCount = user.getSubCount();
     }
 
+    public AccountInfo(AccountInfo ai) {
+        this();
+        this.id(ai.id)
+            .vid(ai.vid)
+            .latestSnapshot(ai.latestSnapshot)
+            .userId(ai.userId)
+            .channelId(ai.channelId)
+            .platform(ai.platform)
+            .upid(ai.UPID)
+            .roles(ai.roles)
+            .badges(ai.badges)
+            .color(ai.color)
+            .username(ai.username)
+            .displayname(ai.displayname)
+            .bio(ai.bio)
+            .link(ai.link)
+            .imageLink(ai.imageLink)
+            .followersCount(ai.followersCount)
+            .subCount(ai.subCount);
+    }
+
     public AccountInfo id(int id) {
         this.id = id;
+        return this;
+    }
+
+    public AccountInfo vid(long vid) {
+        this.vid = vid;
         return this;
     }
 
@@ -218,6 +248,7 @@ public class AccountInfo {
      */
     public AccountInfo fillDefaults(AccountInfo base) {
         if(this.id == DEFAULT_id) this.id = base.id;
+        if(this.vid == DEFAULT_vid) this.vid = base.vid;
         if(this.latestSnapshot == DEFAULT_latestSnapshot) this.latestSnapshot = base.latestSnapshot;
         if(this.userId.isEmpty()) this.userId = base.userId;
         if(this.channelId.isEmpty()) this.channelId = base.channelId;
@@ -242,9 +273,10 @@ public class AccountInfo {
      * @param other
      * @return
      */
-    public boolean similar(AccountInfo other) {
+    public boolean notContradictory(AccountInfo other) {
         boolean similar = true;
         if((this.id != other.id && this.id != DEFAULT_id && other.id != DEFAULT_id)
+                || (this.vid != other.vid && this.vid != DEFAULT_vid && other.vid != DEFAULT_vid)
                 || (this.latestSnapshot != other.latestSnapshot && this.latestSnapshot != DEFAULT_latestSnapshot && other.latestSnapshot != DEFAULT_latestSnapshot)
                 || (!this.userId.equals(other.userId) && !this.userId.equals(DEFAULT_userId) && !other.userId.equals(DEFAULT_userId))
                 || (!this.channelId.equals(other.channelId) && !this.channelId.equals(DEFAULT_channelId) && !other.channelId.equals(DEFAULT_channelId))
@@ -265,9 +297,41 @@ public class AccountInfo {
         return similar;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        AccountInfo other;
+        if(o instanceof AccountInfo) {
+            other = (AccountInfo) o;
+        } else {
+            Tasukaru.instance().getLogger().warn("AccountInfo compared to non-AccountInfo Object!\nAccountInfo:\n" + this + "\nObject:\n" + o.toString());
+            return false;
+        }
+        if((this.id != other.id)
+                || (this.vid != other.vid)
+                || (this.latestSnapshot != other.latestSnapshot)
+                || (!this.userId.equals(other.userId))
+                || (!this.channelId.equals(other.channelId))
+                || (!this.platform.equals(other.platform))
+                || (!this.UPID.equals(other.UPID))
+                || (!this.roles.equals(other.roles))
+                || (!this.badges.equals(other.badges))
+                || (!this.color.equals(other.color))
+                || (!this.username.equals(other.username))
+                || (!this.displayname.equals(other.displayname))
+                || (!this.bio.equals(other.bio))
+                || (!this.link.equals(other.link))
+                || (!this.imageLink.equals(other.imageLink))
+                || (this.followersCount != other.followersCount)
+                || (this.subCount != other.subCount)) {
+            return false;
+        }
+        return true;
+    }
+
     public List<Param> listUnfilledValues() {
         List<Param> params = new ArrayList<>();
         if(id == DEFAULT_id) params.add(new Param(DataType.INT, "id", DEFAULT_id));
+        if(vid == DEFAULT_vid) params.add(new Param(DataType.INT, "vid", DEFAULT_vid));
         if(latestSnapshot == DEFAULT_latestSnapshot) params.add(new Param(DataType.INT, "latestSnapshot", DEFAULT_latestSnapshot));
         if(userId.equals(DEFAULT_userId)) params.add(new Param(DataType.STRING, "userId", DEFAULT_userId));
         if(channelId.equals(DEFAULT_channelId) || channelId.equals(String.valueOf(INT_DEFAULT))) params.add(new Param(DataType.STRING, "channelId", DEFAULT_channelId));
@@ -294,9 +358,10 @@ public class AccountInfo {
             long value = Long.parseLong(String.valueOf(sp.value));
             switch(sp.column) {
                 case "id" : id((int) value); break;
+                case "vid" : vid((long) value); break;
                 case "latestSnapshot" : latestSnapshot((int) value); break;
-                case "followersCount" : followersCount((int) value); break;
-                case "subCount" : subCount((int) value); break;
+                case "followersCount" : followersCount((long) value); break;
+                case "subCount" : subCount((long) value); break;
                 default:
                     FastLogger.logStatic(LogLevel.SEVERE, "unknown INT column " + sp.column + " while modifying VI: " + this);
             }
