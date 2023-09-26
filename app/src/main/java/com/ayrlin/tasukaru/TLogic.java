@@ -37,15 +37,14 @@ public class TLogic {
         return instance;
     }
 
-    public boolean incoming(EventInfo ei) {
+    public void incoming(EventInfo ei) {
         if(processEvent(ei)) {
             vb.addHistory(ei.processed());
-            return true;
         } else {
             vb.addHistory(ei);
-            return false;
         }
-        //TODO calculate interaction time
+        //calculate interaction time
+        //processWatchtime(ei);
     }
 
     public boolean processEvent(EventInfo ei) {
@@ -158,6 +157,26 @@ public class TLogic {
         }
         return true;
     }
+
+    // public boolean processWatchtime(EventInfo ei) {
+    //     int neededCount = 2;
+    //     if(ei.viewer.lurking) {//TODO implement lurking in viewerdata
+    //         neededCount = tsets.getNumber("watchtime.lurk_end").intValue();
+    //     }
+    //     List<EventInfo> eis = vb.retrieveLastViewerInteractions(ei.viewer, neededCount);
+    //     EventInfo lastEI = eis.get(1); //second event aka prior to ei
+    //     long since = timeBetweenEvents(ei,lastEI);
+    //     //consider around time
+    //     //consider chain
+    //     //consider end lurk
+    //     //assign points
+    //     //TODO
+    //     return true;
+    // }
+
+    // private long timeBetweenEvents(EventInfo e1, EventInfo e2) {
+    //     return Math.abs(e1.timestamp - e2.timestamp);
+    // }
 
     public List<String> getSupportedPlatforms() {
         if(supportedPlatforms != null) return supportedPlatforms;

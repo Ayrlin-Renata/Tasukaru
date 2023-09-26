@@ -494,6 +494,7 @@ public class VBHandler {
             }
 
             ci.id((int)rs.getLong("id"))
+                    .vid(rs.getLong("vid"))
                     .latestSnapshot((int)rs.getLong("latestSnapshot"))
                     .userId(rs.getString("userId"))
                     .channelId(rs.getString("channelId"))
@@ -654,4 +655,43 @@ public class VBHandler {
                 .value(points)
                 .streamState(ei.streamState));
     }
+
+    /**
+     * 
+     * @param viewer
+     * @param count
+     * @return a list where the FIRST element is the LAST history event to have ocurred
+     */
+    // public List<EventInfo> retrieveLastViewerInteractions(ViewerInfo viewer, int count) {
+    //     // TODO
+    //     if(viewer.accountIds == null || viewer.accountIds.isEmpty()) {
+    //         getViewerAccounts(viewer);
+    //     }
+    //     List<OpParam> params = new ArrayList<>();
+    //     for(long acc : viewer.accountIds) {
+    //         params.add(new OpParam(DataType.INT, "aid", Op.EQUAL, acc));
+    //     }
+    //     //TODO implement OR in select
+    //     List<Long> eids = new ArrayList<>();
+    //     ActiveResult ar = new SelectQuery()
+    //             .select("id")
+    //             .from("history")
+    //             .where(params)
+    //             .orderBy("timestamp").desc()
+    //             .limit(count)
+    //             .execute(con);
+    //     //ar.rs.next()
+
+    //     List<EventInfo> eis = new ArrayList<>();
+    //     for(long eid : eids) {
+    //         eis.add(retrieveHistory(eid));
+    //     }
+
+    //     return eis;
+    // }
+
+    // public void getViewerAccounts(ViewerInfo viewer) {
+    //     //TODO
+    //     //viewer.accountIds = 
+    // }
 }
