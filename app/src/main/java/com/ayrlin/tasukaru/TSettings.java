@@ -9,6 +9,7 @@ import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
 import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsItem;
 import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsLayout;
 import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsSection;
+import co.casterlabs.koi.api.types.user.UserPlatform;
 import co.casterlabs.rakurai.json.element.JsonObject;
 
 public class TSettings {
@@ -34,7 +35,11 @@ public class TSettings {
     }
 
     public boolean begin() {
-        tskr.setSettings(new JsonObject()); // DEBUG RESET
+        try {
+            tskr.setSettings(new JsonObject()); // DEBUG RESET
+        } catch( Throwable t) {
+            tskr.getLogger().warn("SETTINGS ERROR CAUGHT:\n" + t);
+        }
         Tasukaru.instance().getLogger().trace("building maps");
         this.buildMaps();
         Tasukaru.instance().getLogger().trace("rendering settings");
@@ -46,8 +51,8 @@ public class TSettings {
         platmap = new HashMap<>(); 
         platmap.put("select", "select");
         platmap.put("all", "all platforms");
-        for(String plat : TLogic.instance().getSupportedPlatforms()) {
-            platmap.put(plat, plat.toLowerCase());
+        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+            platmap.put(plat.name(), plat.toString());
         }
 
         actionmap = new HashMap<>(); 
@@ -93,8 +98,8 @@ public class TSettings {
                     sectionBonuses.addItem(WidgetSettingsItem.asCheckbox("apply_all", "apply to all platforms", false));
                     if(tsets.getBoolean("bonuses.apply_all", false)) {
                         tskr.getLogger().trace("setting settings for all " + s_actions);
-                        for(String plat : TLogic.instance().getSupportedPlatforms()) {
-                            jsets.put("bonuses." + plat + "_" + s_actions, tsets.getNumber("bonuses.all_" + s_actions));
+                        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+                            jsets.put("bonuses." + plat.name() + "_" + s_actions, tsets.getNumber("bonuses.all_" + s_actions));
                         }
                         //notify user
                         jsets.put("bonuses.apply_all", false);

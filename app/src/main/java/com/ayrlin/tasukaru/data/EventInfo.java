@@ -1,24 +1,29 @@
 package com.ayrlin.tasukaru.data;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+
+import com.ayrlin.tasukaru.data.info.Info;
+import com.ayrlin.tasukaru.data.info.JsonInfo;
+import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.StringInfo;
+import com.ayrlin.tasukaru.data.info.TimeInfo;
 
 import co.casterlabs.koi.api.types.events.KoiEvent;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
-@ToString
-public class EventInfo {
+@ToString(callSuper = true)
+public class EventInfo extends InfoObject<EventInfo> {
 
-    public Timestamp timestamp;
-    public AccountInfo account;
-    public ViewerInfo viewer;
-    public KoiEvent event;
-    public int snapshotId;
-    public UpType uptype;
-    public Action action;
-    public long value;
-    public String streamState;
-    public boolean processed;
+    private @Getter AccountInfo account;
+    private @Getter @Setter ViewerInfo viewer;
+    private @Getter KoiEvent event;
 
     @AllArgsConstructor
     public enum UpType {
@@ -89,61 +94,47 @@ public class EventInfo {
     }
 
     public EventInfo(Timestamp timestamp) {
-        this.timestamp = timestamp;
-        // defaults
-        this.event = null;
-        this.snapshotId = -1;  
-        this.value = -1; 
-        this.streamState = "unrecorded";
-        this.processed = false;
+        this.data = this.definition();
+        this.set("timestamp", timestamp);
     }
 
     public EventInfo() {
         this(new java.sql.Timestamp(new java.util.Date().getTime()));
     }
 
-    public EventInfo account(AccountInfo account) {
-        this.account = account;
+    protected Map<String,Info<?>> definition() {
+        Map<String,Info<?>> def = new HashMap<>();
+        def.put("timestamp", new TimeInfo());
+        def.put("aid", new NumInfo());
+        def.put("sid", new StringInfo());
+        def.put("event", new JsonInfo());
+        def.put("uptype", new StringInfo());
+        def.put("action", new StringInfo());
+        def.put("value", new NumInfo());
+        def.put("streamstate", new StringInfo().setDefault("unrecorded"));
+        def.put("processed", new StringInfo().setDefault("false"));
+
+        for(Info<?> i : def.values()) {
+            for(Entry<String, Info<?>> entry : def.entrySet()) {
+                if(Objects.equals(i, entry.getValue())) {
+                    i.setName(entry.getKey());
+                    break;
+                }
+            }
+        }
+        return def;
+    }
+
+    public EventInfo setEvent(KoiEvent e) {
+        this.event = e;
+        this.set("event", e);
         return this;
     }
 
-    public EventInfo viewer(ViewerInfo viewer) {
-        this.viewer = viewer;
-        return this;
-    }
-
-    public EventInfo event(KoiEvent event) {
-        this.event = event;
-        return this;
-    }
-
-    public EventInfo snapshotId(int snapshotId) {
-        this.snapshotId = snapshotId;
-        return this;
-    }
-
-    public EventInfo uptype(UpType uptype) {
-        this.uptype = uptype;
-        return this;
-    }
-
-    public EventInfo action(Action action) {
-        this.action = action;
-        return this;
-    }
-
-    public EventInfo value(long value) {
-        this.value = value;
-        return this;
-    }
-
-    public EventInfo streamState(String streamState) {
-        this.streamState = streamState;
-        return this;
-    }
-
-    public EventInfo processed() {
-        processed = true;
+    public EventInfo setAccount(AccountInfo ai) {
+        this.account = ai;
+        this.set("aid", ai.get("id"));
+        //this.set("sid", ai.get("latestsnapshot"));
         return this;
     }
 }

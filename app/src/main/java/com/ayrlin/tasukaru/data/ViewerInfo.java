@@ -1,65 +1,67 @@
 package com.ayrlin.tasukaru.data;
 
 import lombok.ToString;
-import java.util.ArrayList;
-import java.util.List;
 
-@ToString
-public class ViewerInfo {
-    public long id;
-    public String clId;
-    public String clName;
-    public String fallbackName;
-    public long watchtime;
-    public long points;
-    public List<Long> accountIds;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Map.Entry;
+
+import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.StringInfo;
+
+import co.casterlabs.koi.api.types.user.UserPlatform;
+
+import com.ayrlin.tasukaru.TLogic;
+import com.ayrlin.tasukaru.data.info.Info;
+
+@ToString(callSuper = true)
+public class ViewerInfo extends InfoObject<ViewerInfo> {
 
     public ViewerInfo() {
-        id = -1;
-        clId = "";
-        clName = "";
-        fallbackName = "";
-        watchtime = -1;
-        points = -1;
-        accountIds = new ArrayList<>();
+        data = this.definition();
     }
 
-    public ViewerInfo id(long id) {
-        this.id = id;
-        return this;
-    }
+    protected Map<String,Info<?>> definition() {
+        Map<String,Info<?>> def = new HashMap<>();
+        def.put("id", new NumInfo());
+        def.put("clid", new StringInfo());
+        def.put("clname", new StringInfo());
+        def.put("fallbackname", new StringInfo());
+        def.put("watchtime", new NumInfo());
+        def.put("points", new NumInfo());
+        def.put("lurking", new StringInfo());
 
-    public ViewerInfo clId(String clId) {
-        this.clId = clId;
-        return this;
-    }
+        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+            def.put(plat.name(), new NumInfo());
+        }
 
-    public ViewerInfo clName(String clName) {
-        this.clName = clName;
-        return this;
-    }
-
-    public ViewerInfo fallbackName(String fallbackName) {
-        this.fallbackName = fallbackName;
-        return this;
-    }
-
-    public ViewerInfo watchtime(long watchtime) {
-        this.watchtime = watchtime;
-        return this;
-    }
-
-    public ViewerInfo points(long points) {
-        this.points = points;
-        return this;
-    }
-
-    public ViewerInfo accountIds(List<Long> accountIds) {
-        this.accountIds = accountIds;
-        return this;
+        for(Info<?> i : def.values()) {
+            for(Entry<String, Info<?>> entry : def.entrySet()) {
+                if(Objects.equals(i, entry.getValue())) {
+                    i.setName(entry.getKey());
+                    break;
+                }
+            }
+        }
+        return def;
     }
 
     public String getName() {
-        return (clName.isEmpty()? fallbackName : clName);
+        return (this.data.get("clname").atDefault()? 
+                ((StringInfo) this.data.get("fallbackname")).getValue() 
+                : ((StringInfo) this.data.get("clname")).getValue());
+    }
+
+    public List<Long> getAccountIds() {
+        List<Long> accs = new ArrayList<>();
+        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+            NumInfo ni = ((NumInfo)data.get(plat.name()));
+            if(!ni.atDefault())
+                accs.add(ni.getValue());
+        }
+        return accs;
     }
 }

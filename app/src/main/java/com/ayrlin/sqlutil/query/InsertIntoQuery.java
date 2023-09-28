@@ -95,7 +95,7 @@ public class InsertIntoQuery implements Query {
         FastLogger.logStatic(LogLevel.DEBUG, "INSERT statement (key " + key + ") executed, matching " + matched + " rows and impacting " + rows + " rows.");
         if(matched <= 0) return (long) -2; //successful insert returns matched 1 rows 0 for weird reasons
         if(key < 0) {
-            int lid = SQLUtil.retrieveLastInsertId(con);
+            long lid = SQLUtil.retrieveLastInsertId(con);
             if(lid < 0) return (long) -3;
             key = lid;
         }

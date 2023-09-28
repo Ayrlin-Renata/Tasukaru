@@ -183,9 +183,9 @@ public class SQLUtil {
      * @return last insert primary key if successful,
      *         -1 if error
      */
-    public static int retrieveLastInsertId(Connection con) {
+    public static long retrieveLastInsertId(Connection con) {
         String query = "SELECT last_insert_rowid();";
-        int lid;
+        long lid;
         try {
             PreparedStatement prep = con.prepareStatement(query);
             lid = prep.executeQuery().getInt("last_insert_rowid()");

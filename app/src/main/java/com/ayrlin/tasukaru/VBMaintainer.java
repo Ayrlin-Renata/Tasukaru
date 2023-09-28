@@ -21,6 +21,7 @@ import com.ayrlin.sqlutil.query.*;
 import com.ayrlin.sqlutil.query.data.*;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
 import com.ayrlin.tasukaru.data.AccountInfo;
+import com.ayrlin.tasukaru.data.handler.AccountHandler;
 import com.ayrlin.tasukaru.vbdefs.VBTables;
 
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -241,31 +242,35 @@ public class VBMaintainer {
 
     public void updatePlatforms() {
         log.trace("Updating platforms for viewers table.");
-        List<String> cols = TLogic.instance().getSupportedPlatforms();
+        List<String> cols = TLogic.instance().getSupportedPlatforms()
+                .stream()
+                .map(p -> (String) p.name())
+                .collect(Collectors.toList());
         VBHandler.instance().checkAddCols(log, cols);
     }
 
     public void fillAccountTableHoles() {
         VBHandler vb = VBHandler.instance();
+        AccountHandler ah = vb.getAccountHandler();
         //find holes
         List<Long> aids = vb.listAllAccounts();
         for (long aid : aids) {
             log.trace("\nfilling holes for account " + aid);
-            AccountInfo vi = vb.retrieveCurrentAccountInfo(aid);
-            AccountInfo origVi = new AccountInfo(vi);
-            List<Param> missingList = vi.listUnfilledValues();
+            AccountInfo ai = ah.getFromVB(aid);
+            AccountInfo origVi = new AccountInfo(ai);
+            List<Param> missingList = ai.listUnfilledValues();
             if(missingList.isEmpty()) continue;
             for (Param p : missingList) {
-                Param sp = vb.findLastSnapshotValue(vi.id, p);
+                Param sp = vb.findLastSnapshotValue((long) ai.get("id"), p);
                 if(sp.value != null) {
-                    vi.modifyFromParameter(sp);
+                    ai.set(sp.column, sp.value);
                 }
             }
-            if(!vi.equals(origVi)) {
-                log.debug("account info was found to need updating: \nOLD: \n" + origVi + "\nNEW: \n" + vi);
-                vb.updateAccount(vi);
+            if(!ai.equals(origVi)) {
+                log.debug("account info was found to need updating: \nOLD: \n" + origVi + "\nNEW: \n" + ai);
+                ah.updateToVB(ai);
             } else {
-                log.trace("account info was found to NOT need updating: \nOLD: \n" + origVi + "\nNEW: \n" + vi);
+                log.trace("account info was found to NOT need updating: \nOLD: \n" + origVi + "\nNEW: \n" + ai);
             }
         }
         log.debug("hole filling complete.");
