@@ -192,12 +192,12 @@ public class VBHandler {
         List<OpParam> whereList = new ArrayList<>();
 
         // determine most reliable info
-        if (!((String) ai.get("UPID")).isEmpty()) {
-            whereList.add(new OpParam(DataType.STRING, "UPID", Op.EQUAL, ai.get("UPID")));
+        if (!((String) ai.get("upid")).isEmpty()) {
+            whereList.add(new OpParam(DataType.STRING, "upid", Op.EQUAL, ai.get("UPID")));
         } else if (ai.get("platform") != null) {
             whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, ai.get("platform")));
-            if (!((String) ai.get("userId")).isEmpty()) {
-                whereList.add(new OpParam(DataType.STRING, "userId", Op.EQUAL, ai.get("userId")));
+            if (!((String) ai.get("userid")).isEmpty()) {
+                whereList.add(new OpParam(DataType.STRING, "userid", Op.EQUAL, ai.get("userId")));
             } else if (!((String) ai.get("username")).isEmpty()) {
                 whereList.add(new OpParam(DataType.STRING, "username", Op.EQUAL, ai.get("username")));
             } else if (!((String) ai.get("link")).isEmpty()) {
@@ -217,11 +217,11 @@ public class VBHandler {
         long accountId;
         ActiveResult ar = new SelectQuery().select("id").from("accounts").where(whereList).execute(con);
         try {
-            if (!ar.rs.next() || ar.rs.getInt("id") <= 0 ) {
+            if (!ar.rs.next() || ar.rs.getLong("id") <= 0 ) {
                 log.warn("unable to find Account: \n" + ai);
                 return -1;
             }
-            accountId = ar.rs.getInt("id");
+            accountId = ar.rs.getLong("id");
         } catch (SQLException e) {
             SQLUtil.SQLExHandle(e,"SQLException while finding Account: " + ai);
             return -2;

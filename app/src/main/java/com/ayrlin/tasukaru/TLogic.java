@@ -81,7 +81,12 @@ public class TLogic {
                 }
             }
         }
+
+        //make sure account has all fields
         AccountInfo acc = ei.getAccount();
+        acc.fillDefaults(VBHandler.instance().getAccountHandler().getFromVB(accountId));
+        
+        //compare with current data
         if (accountId >= 0) {
             if(!ah.isCurrent(acc)) {
                 acc.fillDefaults(ah.getFromVB((long) acc.get("id")));

@@ -72,7 +72,7 @@ public class VBMaintainer {
             return false;
         }
         updatePlatforms();
-        fillAccountTableHoles();
+        fillAccountTableHoles(true);
         return true;
     }
 
@@ -244,12 +244,12 @@ public class VBMaintainer {
         log.trace("Updating platforms for viewers table.");
         List<String> cols = TLogic.instance().getSupportedPlatforms()
                 .stream()
-                .map(p -> (String) p.name())
+                .map(p -> (String) p.name().toLowerCase())
                 .collect(Collectors.toList());
         VBHandler.instance().checkAddCols(log, cols);
     }
 
-    public void fillAccountTableHoles() {
+    public void fillAccountTableHoles(boolean canUpdate) {
         VBHandler vb = VBHandler.instance();
         AccountHandler ah = vb.getAccountHandler();
         //find holes
@@ -268,7 +268,10 @@ public class VBMaintainer {
             }
             if(!ai.equals(origVi)) {
                 log.debug("account info was found to need updating: \nOLD: \n" + origVi + "\nNEW: \n" + ai);
-                ah.updateToVB(ai);
+                if(canUpdate) {
+                    log.debug("updating account!");
+                    ah.updateToVB(ai);
+                }
             } else {
                 log.trace("account info was found to NOT need updating: \nOLD: \n" + origVi + "\nNEW: \n" + ai);
             }

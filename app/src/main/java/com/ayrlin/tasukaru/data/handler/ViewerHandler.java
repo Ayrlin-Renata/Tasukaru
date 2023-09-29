@@ -67,14 +67,14 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         try {
             if(ar.rs.next()) {
                 vi.set("id",ar.rs.getLong("id"));
-                vi.set("clId", ar.rs.getString("clId"));
-                vi.set("clName", ar.rs.getString("clName"));
-                vi.set("fallbackName", ar.rs.getString("fallbackName"));
+                vi.set("clid", ar.rs.getString("clid"));
+                vi.set("clname", ar.rs.getString("clname"));
+                vi.set("fallbackname", ar.rs.getString("fallbackname"));
                 vi.set("watchtime", ar.rs.getLong("watchtime"));
                 vi.set("points", ar.rs.getLong("points"));
                 List<Long> aids = new ArrayList<>();
                 for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-                    aids.add(ar.rs.getLong(plat.name()));
+                    aids.add(ar.rs.getLong(plat.name().toLowerCase()));
                 }
             }
         } catch (SQLException e) {
@@ -99,9 +99,9 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         log.trace("updating viewer: \n" + vi);
 
         List<Param> params = new ArrayList<>();
-        params.add(new Param(DataType.STRING, "clId", vi.get("clId")));
-        params.add(new Param(DataType.STRING, "clName", vi.get("clName")));
-        params.add(new Param(DataType.STRING, "fallbackName", vi.get("fallbackName")));
+        params.add(new Param(DataType.STRING, "clid", vi.get("clid")));
+        params.add(new Param(DataType.STRING, "clname", vi.get("clname")));
+        params.add(new Param(DataType.STRING, "fallbackname", vi.get("fallbackname")));
         params.add(new Param(DataType.INT, "watchtime", vi.get("watchtime")));
         params.add(new Param(DataType.INT, "points", vi.get("points")));
         for(Long aid : vi.getAccountIds()) {

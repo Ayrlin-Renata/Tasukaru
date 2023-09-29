@@ -70,7 +70,7 @@ public abstract class Info<T> {
      * @return true iff both have a non-default value and the value is not equal.
      */
     public boolean contradicts(Info<?> other) {
-        return (!this.atDefault() && !other.atDefault() && !this.equals(other));
+        return (!this.atDefault() && !other.atDefault() && !this.value.equals(other.value));
     }
 
     public abstract Param getParam();

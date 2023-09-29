@@ -107,6 +107,7 @@ public class AccountInfo extends InfoObject<AccountInfo> {
     public boolean notContradictory(AccountInfo other) {
         for(Info<?> i : data.values()) {
             if(i.contradicts((Info<?>) other.data.get(i.getName()))) {
+                Tasukaru.instance().getLogger().debug("Contradiction found: \n" + i + "\n" + other.data.get(i.getName()));
                 return false;
             }
         }

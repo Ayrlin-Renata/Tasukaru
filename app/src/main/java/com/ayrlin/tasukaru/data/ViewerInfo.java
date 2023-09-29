@@ -35,7 +35,7 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
         def.put("lurking", new StringInfo());
 
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            def.put(plat.name(), new NumInfo());
+            def.put(plat.name().toLowerCase(), new NumInfo());
         }
 
         for(Info<?> i : def.values()) {
@@ -58,7 +58,7 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
     public List<Long> getAccountIds() {
         List<Long> accs = new ArrayList<>();
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            NumInfo ni = ((NumInfo)data.get(plat.name()));
+            NumInfo ni = ((NumInfo)data.get(plat.name().toLowerCase()));
             if(!ni.atDefault())
                 accs.add(ni.getValue());
         }
