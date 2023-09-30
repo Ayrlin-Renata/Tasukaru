@@ -12,7 +12,6 @@ import com.ayrlin.tasukaru.data.info.NumInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 import com.ayrlin.tasukaru.data.info.TimeInfo;
 
-import co.casterlabs.koi.api.types.events.KoiEvent;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,7 +22,6 @@ public class EventInfo extends InfoObject<EventInfo> {
 
     private @Getter AccountInfo account;
     private @Getter @Setter ViewerInfo viewer;
-    private @Getter KoiEvent event;
 
     @AllArgsConstructor
     public enum UpType {
@@ -39,15 +37,14 @@ public class EventInfo extends InfoObject<EventInfo> {
         }
     }
 
-    public interface Action {
-        // :3
-    }
+    public interface Action {}
+    public interface Origin {}
 
     /**
      * Present Action
      */
     @AllArgsConstructor
-    public enum PAct implements Action {
+    public enum PAct implements Action, Origin {
         MESSAGE("message"),
         FOLLOW("follow"),
         SUBSCRIBE("subscribe"),
@@ -93,6 +90,18 @@ public class EventInfo extends InfoObject<EventInfo> {
         }
     }
 
+    @AllArgsConstructor
+    public enum Source implements Origin {
+        WATCHTIME("watchtime");
+
+        String str;
+
+        @Override
+        public String toString() {
+            return str;
+        }
+    }
+
     public EventInfo(Timestamp timestamp) {
         this.data = this.definition();
         this.set("timestamp", timestamp);
@@ -104,14 +113,15 @@ public class EventInfo extends InfoObject<EventInfo> {
 
     protected Map<String,Info<?>> definition() {
         Map<String,Info<?>> def = new HashMap<>();
-        def.put("timestamp", new TimeInfo());
         def.put("aid", new NumInfo());
         def.put("sid", new StringInfo());
-        def.put("event", new JsonInfo());
         def.put("uptype", new StringInfo());
         def.put("action", new StringInfo());
         def.put("value", new NumInfo());
+        def.put("origin", new StringInfo());
         def.put("streamstate", new StringInfo().setDefault("unrecorded"));
+        def.put("timestamp", new TimeInfo());
+        def.put("event", new JsonInfo());
         def.put("processed", new StringInfo().setDefault("false"));
 
         for(Info<?> i : def.values()) {
@@ -123,12 +133,6 @@ public class EventInfo extends InfoObject<EventInfo> {
             }
         }
         return def;
-    }
-
-    public EventInfo setEvent(KoiEvent e) {
-        this.event = e;
-        this.set("event", e);
-        return this;
     }
 
     public EventInfo setAccount(AccountInfo ai) {

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ayrlin.sqlutil.query.data.Param;
+import com.ayrlin.tasukaru.Tasukaru;
 
 import co.casterlabs.rakurai.json.TypeToken;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
@@ -39,6 +40,16 @@ public abstract class Info<T> {
 
     @SuppressWarnings("unchecked")
     public void setValue(Object o) throws ClassCastException {
+        if(o == null) {
+            Tasukaru.instance().getLogger().debug("null value attempted to be set on Info: " + this);
+            if(Number.class.isAssignableFrom(datatype.getTypeClass())) {
+                o = NumInfo.NUM_DEFAULT;
+            } else if(String.class.isAssignableFrom(datatype.getTypeClass())) {
+                o = StringInfo.STRING_DEFAULT;
+            } else if(List.class.isAssignableFrom(datatype.getTypeClass())) {
+                o = new ArrayList<>();
+            }
+        }
         if(datatype.getTypeClass().isInstance(o))
             value = (T)o;
         else throw new ClassCastException("attempted to setValue of Info to a type which it is not: " + o);

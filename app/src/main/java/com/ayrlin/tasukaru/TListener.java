@@ -6,8 +6,6 @@ import com.ayrlin.tasukaru.data.EventInfo.AAct;
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
 import com.ayrlin.tasukaru.data.EventInfo.UpType;
 
-import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
-import co.casterlabs.caffeinated.pluginsdk.koi.Koi;
 import co.casterlabs.koi.api.listener.*;
 import co.casterlabs.koi.api.types.events.*;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -17,12 +15,10 @@ public class TListener implements KoiEventListener {
 
     private FastLogger log;
     private TLogic tl;
-    private Koi koi; ;
 
     private TListener() {
         this.log = Tasukaru.instance().getLogger();
         this.tl = TLogic.instance();
-        this.koi = Caffeinated.getInstance().getKoi();
     }
 
     /**
@@ -90,7 +86,7 @@ public class TListener implements KoiEventListener {
                 .setAccount(tskrViewerData)
                 .set("event", e)
                 .set("uptype", UpType.PRESENT)
-                .set("streamState", (koi.getStreamStates().get(e.getSender().getPlatform()).isLive())? "live" : "offline"); //is the stream live rn
+                .set("streamState", tl.streamLive(e.getSender().getPlatform())? "live" : "offline"); //is the stream live rn
         if (e.getDonations().isEmpty()) {
             histEvent = histEvent.set("action", PAct.MESSAGE);
         } else {

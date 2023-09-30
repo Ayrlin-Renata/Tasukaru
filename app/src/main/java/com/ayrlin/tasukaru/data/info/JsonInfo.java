@@ -60,6 +60,9 @@ public class JsonInfo extends Info<Object> {
             Tasukaru.instance().getLogger().warn("exception while parsing json from VB: " + input);
             e.printStackTrace();
         }
+        if(rs.wasNull()) {
+            this.value = defaultInfo;
+        }
         return value;
     }
 }

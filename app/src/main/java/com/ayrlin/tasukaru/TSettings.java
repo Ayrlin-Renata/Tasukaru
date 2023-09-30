@@ -35,11 +35,11 @@ public class TSettings {
     }
 
     public boolean begin() {
-        try {
-            tskr.setSettings(new JsonObject()); // DEBUG RESET
-        } catch( Throwable t) {
-            tskr.getLogger().warn("SETTINGS ERROR CAUGHT:\n" + t);
-        }
+        // try {
+        //     tskr.setSettings(new JsonObject()); // DEBUG RESET
+        // } catch( Throwable t) {
+        //     tskr.getLogger().warn("SETTINGS ERROR CAUGHT:\n" + t);
+        // }
         Tasukaru.instance().getLogger().trace("building maps");
         this.buildMaps();
         Tasukaru.instance().getLogger().trace("rendering settings");
@@ -137,6 +137,7 @@ public class TSettings {
         sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_bonus", "lurk base watchtime (mins.)", 30, 1, 0, Integer.MAX_VALUE));
         sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_chain", "lurk chain timeout (mins.)", 60, 1, 0, Integer.MAX_VALUE));
         sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_end", "lurk end density (chat/5min)", 10, 1, 0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_timeout", "lurk timeout (mins.)", 90, 1, 0, Integer.MAX_VALUE));
 
         tLayout.addSection(sectionWatchtime);
         

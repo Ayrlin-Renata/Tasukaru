@@ -15,6 +15,7 @@ import com.ayrlin.tasukaru.data.info.StringInfo;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 
 import com.ayrlin.tasukaru.TLogic;
+import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.data.info.Info;
 
 @ToString(callSuper = true)
@@ -58,10 +59,11 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
     public List<Long> getAccountIds() {
         List<Long> accs = new ArrayList<>();
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            NumInfo ni = ((NumInfo)data.get(plat.name().toLowerCase()));
+            NumInfo ni = ((NumInfo) data.get(plat.name().toLowerCase()));
             if(!ni.atDefault())
                 accs.add(ni.getValue());
         }
+        Tasukaru.instance().getLogger().trace("retrieved account ids for viewer " + getName() + ": " + accs.toString());
         return accs;
     }
 }

@@ -10,6 +10,7 @@ import java.util.List;
 import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
 import com.ayrlin.sqlutil.query.data.OpParam;
+import com.ayrlin.sqlutil.query.data.OpParamList;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.SCol;
 
@@ -21,7 +22,7 @@ import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 public class SelectQuery implements Query {
     public List<SCol> select; 
     public String from;
-    public List<OpParam> where;
+    public OpParamList where;
     public String selectString;
     public String orderBy;
     public boolean asc;
@@ -29,7 +30,7 @@ public class SelectQuery implements Query {
 
     public SelectQuery() {
         select = new ArrayList<>();
-        where = new ArrayList<>();
+        where = new OpParamList();
         selectString = "";
         orderBy = "";
         asc = true;
@@ -52,7 +53,12 @@ public class SelectQuery implements Query {
     }
 
     public SelectQuery where(List<OpParam> match) {
-        this.where.addAll(match);
+        this.where.addAll((List<OpParam>) match);
+        return this;
+    }
+
+    public SelectQuery where(OpParamList match) {
+        this.where.addAll((OpParamList) match);
         return this;
     }
 
@@ -95,12 +101,7 @@ public class SelectQuery implements Query {
         
         String qs = "SELECT " + selectString + " FROM " + from;
         if(!where.isEmpty()) { 
-            List<String> whereList = new ArrayList<>();
-            for(OpParam p : where) {
-                whereList.add("\"" + p.getColumn() + "\" " + p.operation.toString() + " ?");
-            }
-            String whereString = String.join(" AND ",whereList);
-            qs += " WHERE " + whereString;
+            qs += " WHERE " + where.getSQL();
         }
         if(!orderBy.isEmpty()) {
             qs += " ORDER BY " + orderBy + (asc? " ASC" : " DESC");

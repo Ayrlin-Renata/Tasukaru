@@ -41,6 +41,9 @@ public class NumInfo extends Info<Long> {
     @Override
     public Long assign(ResultSet rs) throws SQLException {
         setValue(rs.getLong(name));
+        if(rs.wasNull()) {
+            this.value = defaultInfo;
+        }
         return value;
     }
     

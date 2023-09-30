@@ -56,6 +56,9 @@ public abstract class ListInfo<T> extends Info<List<T>> {
             Tasukaru.instance().getLogger().warn("exception while parsing list from VB: " + input);
             e.printStackTrace();
         }
+        if(rs.wasNull()) {
+            this.value = defaultInfo;
+        }
         return value;
     }
 }

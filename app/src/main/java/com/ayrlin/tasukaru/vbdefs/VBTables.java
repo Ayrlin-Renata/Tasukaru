@@ -62,11 +62,12 @@ public static Table history =  new Table("history")
         .col(new Col("id", DataType.INT).primaryKey())
         .col(new Col("aid", DataType.INT).references("accounts(id)"))
         .col(new Col("sid", DataType.INT).references("snapshots(id)"))
-        .col(new Col("uptype", DataType.STRING)) // present, absent, technical
+        .col(new Col("uptype", DataType.STRING))
         .col(new Col("action", DataType.STRING))
         .col(new Col("value", DataType.INT))
-        .col(new Col("event", DataType.STRING))
-        .col(new Col("timestamp", DataType.INT))
+        .col(new Col("origin", DataType.STRING))
         .col(new Col("streamstate", DataType.STRING))
+        .col(new Col("timestamp", DataType.INT))
+        .col(new Col("event", DataType.STRING))
         .col(new Col("processed", DataType.STRING));
 }

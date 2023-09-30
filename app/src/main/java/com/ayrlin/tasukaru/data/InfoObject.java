@@ -62,7 +62,7 @@ public abstract class InfoObject<T extends InfoObject<T>> {
         try { 
             value = data.get(key).getValue(); 
         } catch(NullPointerException e) {
-            Tasukaru.instance().getLogger().warn("null pointer retrieving key '" + key + "' from InfoObject: n" + this.toString());
+            Tasukaru.instance().getLogger().warn("null pointer retrieving key '" + key + "' from InfoObject: " + this.toString());
         }
         return value;
     }

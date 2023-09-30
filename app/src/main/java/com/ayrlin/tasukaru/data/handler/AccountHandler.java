@@ -1,14 +1,10 @@
 package com.ayrlin.tasukaru.data.handler;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
-import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.OpParam;
 import com.ayrlin.sqlutil.query.data.Param;
@@ -59,32 +55,7 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
 
     @Override
     public AccountInfo getFromVB(long id) {
-        VBHandler vb = VBHandler.instance();
-        Connection con = vb.getConnection();
-        FastLogger log = Tasukaru.instance().getLogger();
-        log.trace("retrieving current Account info.");
-
-        ActiveResult ar = new SelectQuery()
-                .select("*")
-                .from("accounts")
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, id))
-                .execute(con);
-        ResultSet rs = ar.rs;
-        AccountInfo ci = new AccountInfo();
-        try {
-            if (!rs.next()) {
-                log.warn("unable to find Account with id: \n" + id);
-                return null;
-            }
-            for(Info<?> i : ci.getData().values()) {
-                log.trace("assigning object: \n" + i);
-                i.assign(rs);
-            }
-        } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while retrieving Account info with id: \n" + id);
-        } finally { ar.close(); }
-        log.debug("retrieved current Account info: \n" + ci);
-        return ci;
+        return getFromVBHelper("accounts", id, new AccountInfo());
     }
 
     @Override

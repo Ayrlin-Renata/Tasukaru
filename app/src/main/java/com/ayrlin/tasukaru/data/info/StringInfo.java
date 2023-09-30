@@ -41,6 +41,9 @@ public class StringInfo extends Info<String> {
     @Override
     public String assign(ResultSet rs) throws SQLException {
         setValue(rs.getString(name));
+        if(rs.wasNull()) {
+            this.value = defaultInfo;
+        }
         return value;
     }
 }

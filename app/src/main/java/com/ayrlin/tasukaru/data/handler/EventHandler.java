@@ -38,8 +38,7 @@ public class EventHandler extends InfoObjectHandler<EventInfo> {
 
     @Override
     public EventInfo getFromVB(long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getFromVB'");
+        return getFromVBHelper("history", id, new EventInfo());
     }
 
     @Override

@@ -18,10 +18,13 @@ import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.data.Col;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.OpParam;
+import com.ayrlin.sqlutil.query.data.OpParamList;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.OpParamList.Cnj;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
+import com.ayrlin.tasukaru.data.EventInfo.Origin;
 import com.ayrlin.tasukaru.data.EventInfo.TAct;
 import com.ayrlin.tasukaru.data.EventInfo.UpType;
 import com.ayrlin.tasukaru.data.handler.AccountHandler;
@@ -348,18 +351,19 @@ public class VBHandler {
         }
     }
 
-    public void addPoints(EventInfo ei, Long points) {
+    public void addPoints(EventInfo ei, Long points, Origin origin) {
         log.debug("adding " + points + " points to viewer: " + ei.getViewer().getName());
         
         ei.getViewer().set("points", (Long) ei.getViewer().get("points") + points);
         
         viewerHandler.updateToVB(ei.getViewer());
         eventHandler.addToVB(new EventInfo()
-                .set("account", ei.get("account"))
+                .set("aid", ei.getAccount().get("id"))
                 .set("sid", ei.get("sid"))
                 .set("uptype", UpType.TECHNICAL.toString())
                 .set("action", TAct.POINTS.toString())
                 .set("value", points)
+                .set("origin", origin.toString())
                 .set("streamState", ei.get("streamState")));
     }
 
@@ -369,36 +373,34 @@ public class VBHandler {
      * @param count
      * @return a list where the FIRST element is the LAST history event to have ocurred
      */
-    // public List<EventInfo> retrieveLastViewerInteractions(ViewerInfo viewer, int count) {
-    //     // TODO
-    //     if(viewer.accountIds == null || viewer.accountIds.isEmpty()) {
-    //         getViewerAccounts(viewer);
-    //     }
-    //     List<OpParam> params = new ArrayList<>();
-    //     for(long acc : viewer.accountIds) {
-    //         params.add(new OpParam(DataType.INT, "aid", Op.EQUAL, acc));
-    //     }
-    //     //TODO implement OR in select
-    //     List<Long> eids = new ArrayList<>();
-    //     ActiveResult ar = new SelectQuery()
-    //             .select("id")
-    //             .from("history")
-    //             .where(params)
-    //             .orderBy("timestamp").desc()
-    //             .limit(count)
-    //             .execute(con);
-    //     //ar.rs.next()
+    public List<EventInfo> retrieveLastViewerInteractions(ViewerInfo viewer, long count) {
+        OpParamList params = new OpParamList().setDefaultCnj(Cnj.OR);
+        for(long acc : viewer.getAccountIds()) {
+            params.add(new OpParam(DataType.INT, "aid", Op.EQUAL, acc));
+        }
+        List<Long> eids = new ArrayList<>();
+        ActiveResult ar = new SelectQuery()
+                .select("id")
+                .from("history")
+                .where(params)
+                .orderBy("timestamp").desc()
+                .limit(count)
+                .execute(con);
+              
+        try {
+            while(ar.rs.next()) {
+                eids.add(ar.rs.getLong("id"));
+            }
+        } catch (SQLException e) {
+            SQLUtil.SQLExHandle(e, "sqlexception while retrieving ids for last viewer interactions for viewer: \n" + viewer);
+        }
 
-    //     List<EventInfo> eis = new ArrayList<>();
-    //     for(long eid : eids) {
-    //         eis.add(retrieveHistory(eid));
-    //     }
+        List<EventInfo> eis = new ArrayList<>();
+        for(long eid : eids) {
+            eis.add(eventHandler.getFromVB(eid));
+        }
 
-    //     return eis;
-    // }
+        return eis;
+    }
 
-    // public void getViewerAccounts(ViewerInfo viewer) {
-    //     //TODO
-    //     //viewer.accountIds = 
-    // }
 }

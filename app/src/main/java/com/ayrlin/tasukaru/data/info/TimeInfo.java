@@ -42,6 +42,9 @@ public class TimeInfo extends Info<Timestamp> {
     @Override
     public Timestamp assign(ResultSet rs) throws SQLException {
         setValue(new java.sql.Timestamp(rs.getLong(name)));
+        if(rs.wasNull()) {
+            this.value = defaultInfo;
+        }
         return value;
     }
 }

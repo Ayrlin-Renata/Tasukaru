@@ -1,19 +1,22 @@
 package com.ayrlin.tasukaru;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
-import com.ayrlin.tasukaru.data.ViewerInfo;
 import com.ayrlin.tasukaru.data.EventInfo.AAct;
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
+import com.ayrlin.tasukaru.data.EventInfo.Source;
 import com.ayrlin.tasukaru.data.EventInfo.TAct;
 import com.ayrlin.tasukaru.data.EventInfo.UpType;
+import com.ayrlin.tasukaru.data.ViewerInfo;
 import com.ayrlin.tasukaru.data.handler.AccountHandler;
 import com.ayrlin.tasukaru.data.handler.EventHandler;
 import com.ayrlin.tasukaru.data.handler.ViewerHandler;
 
+import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
 import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -51,7 +54,7 @@ public class TLogic {
             eh.addToVB(ei);
         }
         //calculate interaction time
-        //processWatchtime(ei);
+        processWatchtime(ei);
     }
 
     public boolean processEvent(EventInfo ei) {
@@ -105,6 +108,8 @@ public class TLogic {
                     ah.updateToVB(acc);
                 }
             }
+            //update ei
+            ei.set("aid", acc.get("id"));
             ei.set("sid", (int) vb.findLatestSnapshot((long) acc.get("id")));
         }
         // find or add viewer
@@ -139,19 +144,27 @@ public class TLogic {
     }
 
     private boolean processEventActions(EventInfo ei) {
+        float offlineBonusMult = tsets.getNumber("points.offline_bonus_mult").floatValue(); 
+        float offlineChatMult = tsets.getNumber("points.offline_chat_mult").floatValue(); 
+        float offlineTotalMult = offlineBonusMult;
+        UserPlatform platform = UserPlatform.valueOf(ei.getAccount().get("platform").toString());
+        boolean offline = !streamLive(platform);
+
         switch (UpType.valueOf(((String) ei.get("uptype")).toUpperCase())) {
             case PRESENT:
-                switch (PAct.valueOf(((String) ei.get("action")).toUpperCase())) {
-                    case JOIN:
+                PAct presAct = PAct.valueOf(((String) ei.get("action")).toUpperCase());
+                switch (presAct) {
                     case MESSAGE:
+                        offlineTotalMult = offlineChatMult;
+                    case JOIN:
                     case FOLLOW:
                     case SUBSCRIBE:
-                        Long points = tsets.getNumber("bonuses." + ei.getAccount().get("platform") + "_" + (PAct.valueOf(((String) ei.get("action")).toUpperCase()).name())).longValue();
-                        vb.addPoints(ei, points);
+                        Long points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
+                        vb.addPoints(ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
                         break;
                     case DONATE:
-                        Long d_points = tsets.getNumber("bonuses." + ei.getAccount().get("platform") + "_" + (PAct.valueOf(((String) ei.get("action")).toUpperCase()).name())).longValue();
-                        vb.addPoints(ei, d_points);
+                        Long d_points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
+                        vb.addPoints(ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
                         // featurecreep: add points based on value
                         break;
                 }
@@ -177,25 +190,78 @@ public class TLogic {
         return true;
     }
 
-    // public boolean processWatchtime(EventInfo ei) {
-    //     int neededCount = 2;
-    //     if(ei.viewer.lurking) {//TODO implement lurking in viewerdata
-    //         neededCount = tsets.getNumber("watchtime.lurk_end").intValue();
-    //     }
-    //     List<EventInfo> eis = vb.retrieveLastViewerInteractions(ei.viewer, neededCount);
-    //     EventInfo lastEI = eis.get(1); //second event aka prior to ei
-    //     long since = timeBetweenEvents(ei,lastEI);
-    //     //consider around time
-    //     //consider chain
-    //     //consider end lurk
-    //     //assign points
-    //     //TODO
-    //     return true;
-    // }
+    public boolean processWatchtime(EventInfo ei) {
+        if(!streamLive(UserPlatform.valueOf(ei.getAccount().get("platform").toString()))) {
+            log.trace("stream offline, skipping processing for watchtime of " + ei.getViewer().getName());
+            return true;
+        }
+        long timeCountedMs = 0L;
 
-    // private long timeBetweenEvents(EventInfo e1, EventInfo e2) {
-    //     return Math.abs(e1.timestamp - e2.timestamp);
-    // }
+        long neededCount = 2;
+        boolean lurking = (boolean) ei.getViewer().get("lurking");
+        long lurkEnd = tsets.getNumber("watchtime.lurk_end").longValue(); //in chat/5mins
+        if(lurking) {
+            neededCount = lurkEnd;
+        }
+
+        List<EventInfo> eis = vb.retrieveLastViewerInteractions(ei.getViewer(), neededCount);
+        EventInfo lastEI = eis.get(1); //second event aka prior to ei
+        long sinceMs = timeBetweenEvents(ei,lastEI);
+        
+        //consider chain
+        long chainTimeoutMs = minsToMs(tsets.getNumber(lurking? "watchtime.lurk_chain" : "watchtime.chain_timeout").longValue());
+        boolean chain = sinceMs < chainTimeoutMs;
+        
+        //consider around time
+        long aroundTimeMs = minsToMs(tsets.getNumber("watchtime.around_present").longValue());
+
+        // CALCULATE
+        if(chain) {
+            timeCountedMs += sinceMs;
+            log.trace("extending viewer " + ei.getViewer().getName() + " chain by " + sinceMs);
+        } else {
+            timeCountedMs += aroundTimeMs * 2; //the end and beginning of the previous chain, since it wasnt counted at the start 
+            log.trace("ending viewer " + ei.getViewer().getName() + " chain. adding around time: " + aroundTimeMs * 2);
+        }
+        
+        //consider end lurk
+        if(lurking) {
+            boolean endLurk = false;
+            long lurkTimeoutMs = minsToMs(tsets.getNumber("watchtime.lurk_timeout").longValue());
+            if(sinceMs > lurkTimeoutMs) {
+                endLurk = true;
+                log.trace("ending viewer " + ei.getViewer().getName() + " lurk. timeout: " + lurkTimeoutMs + " time since last: " + sinceMs);
+            } else {
+                int earliestIndex = (int) Math.min((long) eis.size(), lurkEnd) - 1; //zero based
+                EventInfo earliestEI = eis.get(earliestIndex); //earliest event in eis
+                long chatDensity = timeBetweenEvents(ei, earliestEI); 
+                if(chatDensity > 5L * 60L * 1000L) {
+                    endLurk = true;  
+                    log.trace("ending viewer " + ei.getViewer().getName() + " lurk. time since earliest interaction (" + earliestEI.get("id") + ") within density: " + chatDensity);
+                }
+            }
+            if(endLurk) {
+                ei.getViewer().set("lurking", String.valueOf(false));
+            }
+        }
+
+        //assign points
+        float lurkMult = tsets.getNumber("points.lurk_mult").floatValue(); 
+        float pointsPerHr = tsets.getNumber("points.watchtime").floatValue();
+        float pointsPerS = pointsPerHr / 3600F;
+        long totalPoints = (long) ((timeCountedMs / 60F) * pointsPerS * lurkMult); 
+        vb.addPoints(ei, totalPoints, Source.WATCHTIME);
+        
+        return true;
+    }
+
+    private long timeBetweenEvents(EventInfo e1, EventInfo e2) {
+        return Math.abs(((Timestamp) e2.get("timestamp")).getTime() - ((Timestamp) e1.get("timestamp")).getTime());
+    }
+
+    private long minsToMs(long mins) {
+        return mins * 60L * 1000L; //60 s/min, 1000 ms/s
+    }
 
     public List<UserPlatform> getSupportedPlatforms() {
         if(supportedPlatforms != null) return supportedPlatforms;
@@ -209,5 +275,9 @@ public class TLogic {
         }
         log.debug("Found supported CL platforms: \n" + supportedPlatforms);
         return supportedPlatforms;
+    }
+
+    public boolean streamLive(UserPlatform plat) {
+        return (Caffeinated.getInstance().getKoi().getStreamStates().get(plat).isLive());
     }
 }
