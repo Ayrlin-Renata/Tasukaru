@@ -1,13 +1,16 @@
 package com.ayrlin.tasukaru;
 
+import java.sql.Timestamp;
+
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
-import com.ayrlin.tasukaru.data.EventInfo.AAct;
-import com.ayrlin.tasukaru.data.EventInfo.PAct;
-import com.ayrlin.tasukaru.data.EventInfo.UpType;
+import com.ayrlin.tasukaru.data.EventInfo.*;
 
+import co.casterlabs.caffeinated.pluginsdk.Currencies;
 import co.casterlabs.koi.api.listener.*;
 import co.casterlabs.koi.api.types.events.*;
+import co.casterlabs.koi.api.types.events.rich.Donation;
+import co.casterlabs.koi.api.types.user.User;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TListener implements KoiEventListener {
@@ -32,101 +35,104 @@ public class TListener implements KoiEventListener {
         return instance;
     }
 
+    @KoiEventHandler
+    public void onViewerList(ViewerListEvent e) { //todo list
+        for(User u : e.getViewers()) {
+            ingestHelper(UpType.PRESENT, PAct.LISTED, u, e);
+        }
+    }
+
+    @KoiEventHandler
+    public void onViewerJoin(ViewerJoinEvent e) {
+        ingestHelper(UpType.PRESENT, PAct.JOIN, e.getViewer(), e);
+    }
+
+    @KoiEventHandler
+    public void onViewerLeave(ViewerLeaveEvent e) {
+        ingestHelper(UpType.ABSENT, AAct.LEAVE, e.getViewer(), e);
+    }
+
+    // for messages and also donations
+    @KoiEventHandler
+    public void onRichMessage(RichMessageEvent e) {
+        if(!e.getDonations().isEmpty()) {
+            long donoValue = 0L;
+            for(Donation dono : e.getDonations()) {
+                double trueAmount = dono.getAmount() * dono.getCount();
+                double convertedAmount = -1D;
+                try {
+                    convertedAmount = Currencies.convertCurrency(trueAmount, dono.getCurrency(), Currencies.baseCurrency).await();
+                } catch(Throwable t) {
+                    log.warn("exception while converting currencies in donation event: " + dono);
+                    FastLogger.logException(t);
+                }
+                donoValue = (convertedAmount < 0)? -1L : Math.round(1000D * convertedAmount);
+            }
+            if(donoValue < 0) {
+                log.warn("donation unable to be appraised!");
+                ingestHelper(UpType.PRESENT, PAct.DONATE, e.getSender(), e, -1);
+            } else {
+                ingestHelper(UpType.PRESENT, PAct.DONATE, e.getSender(), e, donoValue);
+            }
+        } else {
+            ingestHelper(UpType.PRESENT, PAct.MESSAGE, e.getSender(), e);
+        }
+    }
+
+    @KoiEventHandler
+    public void onFollow(FollowEvent e) {
+        ingestHelper(UpType.PRESENT, PAct.FOLLOW, e.getFollower(), e);
+    }
+
+    @KoiEventHandler
+    public void onSubscription(SubscriptionEvent e) {
+        ingestHelper(UpType.PRESENT, PAct.SUBSCRIBE, e.getSubscriber(), e);
+    }
+
+    @KoiEventHandler
+    public void onRaid(RaidEvent e) { 
+        ingestHelper(UpType.PRESENT, PAct.RAID, e.getHost(), e, e.getViewers());
+    }
+
+    @KoiEventHandler
+    public void onChannelPoints(ChannelPointsEvent e) { 
+        ingestHelper(UpType.PRESENT, PAct.CHANNELPOINTS, e.getSender(), e, e.getReward().getCost());
+    }
+
+    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, long value, boolean novalue) {
+        log.debug("Tasukaru recieved KoiEvent: " + e.getType());
+        log.trace(e);
+
+        AccountInfo ai = new AccountInfo(user);
+        EventInfo ei = new EventInfo(Timestamp.from(e.getTimestamp()))
+                .setAccount(ai)
+                .set("uptype", up)
+                .set("action", act)
+                .set("origin", Source.KOIEVENT)
+                .set("streamState", tl.streamLive(user.getPlatform())? Stream.ONLINE : Stream.OFFLINE);
+        if(!novalue) ei.set("value", value);
+        tl.incoming(ei);
+    }
+
+    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, long value) {
+        ingestHelper(up, act, user, e, value, false);
+    }
+
+    public void ingestHelper(UpType up, Action act, User user, KoiEvent e) {
+        ingestHelper(up, act, user, e, 0L, true);
+    }
+
     // @KoiEventHandler
     // public void onViewerCount(ViewerCountEvent e) {
     //     log.debug("Tasukaru recieved ViewerCountEvent.");
     //     log.trace(e);
     // }
 
-    @KoiEventHandler
-    public void onViewerList(ViewerListEvent e) { //todo list
-        log.debug("Tasukaru recieved ViewerListEvent.");
-        log.trace(e);
-
-    }
-
-    @KoiEventHandler
-    public void onViewerJoin(ViewerJoinEvent e) { //todo join
-        log.debug("Tasukaru recieved ViewerJoinEvent.");
-        log.trace(e);
-        AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo()
-                .setAccount(tskrViewerData)
-                .set("uptype", UpType.PRESENT)
-                .set("action", PAct.JOIN);
-        tl.incoming(histEvent);
-    }
-
-    @KoiEventHandler
-    public void onViewerLeave(ViewerLeaveEvent e) {
-        log.debug("Tasukaru recieved ViewerLeaveEvent.");
-        log.trace(e);
-        AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
-        EventInfo histEvent = new EventInfo()
-                .setAccount(tskrViewerData)
-                .set("uptype", UpType.ABSENT)
-                .set("action", AAct.LEAVE);
-        tl.incoming(histEvent);
-    }
-
     // @KoiEventHandler
     // public void onStreamStatus(StreamStatusEvent e) {
     //     log.debug("Tasukaru recieved StreamStatusEvent.");
     //     log.trace(e);
     // }
-
-    // for messages and also donations
-    @KoiEventHandler
-    public void onRichMessage(RichMessageEvent e) {
-        log.debug("Tasukaru recieved RichMessageEvent.");
-        log.trace(e);
-
-        AccountInfo tskrViewerData = new AccountInfo(e.getSender());
-        EventInfo histEvent = new EventInfo()
-                .setAccount(tskrViewerData)
-                .set("event", e)
-                .set("uptype", UpType.PRESENT)
-                .set("streamState", tl.streamLive(e.getSender().getPlatform())? "live" : "offline"); //is the stream live rn
-        if (e.getDonations().isEmpty()) {
-            histEvent = histEvent.set("action", PAct.MESSAGE);
-        } else {
-            histEvent = histEvent.set("action", PAct.DONATE);
-            // featurecreep .value(TUtil.usdValue(e.getDonations())); use Currencies from casterlabs util
-        }
-        tl.incoming(histEvent);
-    }
-
-    @KoiEventHandler
-    public void onFollow(FollowEvent e) {
-        log.debug("Tasukaru recieved FollowEvent.");
-        log.trace(e);
-
-        AccountInfo tskrViewerData = new AccountInfo(e.getFollower());
-        EventInfo histEvent = new EventInfo()
-                .setAccount(tskrViewerData)
-                .set("uptype", UpType.PRESENT)
-                .set("action", PAct.FOLLOW);
-        tl.incoming(histEvent);
-    }
-
-    @KoiEventHandler
-    public void onSubscription(SubscriptionEvent e) {
-        log.debug("Tasukaru recieved SubscriptionEvent.");
-        log.trace(e);
-
-        AccountInfo tskrViewerData = new AccountInfo(e.getSubscriber());
-        EventInfo histEvent = new EventInfo()
-                .setAccount(tskrViewerData)
-                .set("uptype", UpType.PRESENT)
-                .set("action", PAct.SUBSCRIBE);
-        tl.incoming(histEvent);
-    }
-
-    @KoiEventHandler
-    public void onChannelPoints(ChannelPointsEvent e) { //todo
-        log.debug("Tasukaru recieved ChannelPointsEvent.");
-        log.trace(e);
-    }
 
     // // "clear chat happens when you clear the chat OR when a user gets banned and
     // // their messages get pruned"
@@ -162,13 +168,6 @@ public class TListener implements KoiEventListener {
     // log.debug("Tasukaru recieved PlatformMessageEvent.");
 
     // }
-
-    // @KoiEventHandler
-    // public void onRaid(RaidEvent e) { //TODO based on raider number?
-    // log.debug("Tasukaru recieved RaidEvent.");
-
-    // }
-
 
     // // "room state is for things like follower only mode, emote only, etc"
     // @KoiEventHandler

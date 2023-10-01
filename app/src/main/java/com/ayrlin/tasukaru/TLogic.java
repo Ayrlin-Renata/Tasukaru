@@ -146,45 +146,64 @@ public class TLogic {
     }
 
     private boolean processEventActions(EventInfo ei) {
-        float offlineBonusMult = tsets.getNumber("points.offline_bonus_mult").floatValue(); 
-        float offlineChatMult = tsets.getNumber("points.offline_chat_mult").floatValue(); 
-        float offlineTotalMult = offlineBonusMult;
+        double offlineBonusMult = tsets.getNumber("points.offline_bonus_mult").doubleValue(); 
+        double offlineChatMult = tsets.getNumber("points.offline_chat_mult").doubleValue(); 
+        double offlineTotalMult = offlineBonusMult;
         UserPlatform platform = UserPlatform.valueOf(ei.getAccount().get("platform").toString());
         boolean offline = !streamLive(platform);
 
         switch (UpType.valueOf(((String) ei.get("uptype")).toUpperCase())) {
             case PRESENT:
                 PAct presAct = PAct.valueOf(((String) ei.get("action")).toUpperCase());
+                long baseActPts = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
+                long streamActPts = Math.round(baseActPts * (offline? offlineTotalMult : 1F));
+                long finalPts = streamActPts;
                 switch (presAct) {
                     case MESSAGE:
-                        offlineTotalMult = offlineChatMult;
+                        finalPts = Math.round(baseActPts * (offline? offlineChatMult : 1F));
+                        break;
                     case JOIN:
+                        break;
                     case FOLLOW:
+                        break;
                     case SUBSCRIBE:
-                        Long points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.viewerHandler.addPoints(ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
                         break;
                     case DONATE:
-                        Long d_points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.viewerHandler.addPoints(ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
-                        // featurecreep: add points based on value
+                        long transposedValue = (long) ei.get("value");    
+                        if(transposedValue < 0) {
+                            log.warn("skipping unknown donation point assignment!");
+                            break;
+                        }
+                        double value = transposedValue / 1000D; //TODO value is multiplied by 1000 bc i cant record doubles in VB rn aaa RIP
+                        double pointsPerUnit = tsets.getNumber("points.dono_per_unit").doubleValue();   //TODO add this to SettingsLayour
+                        finalPts = Math.round(streamActPts + (value * pointsPerUnit));
+                        break;
+                    case RAID: 
+                        long numRaiders = (long) ei.get("value");  
+                        double raiderMult = tsets.getNumber("points.raider_bonus").doubleValue(); //TODO add this to SettingsLayour
+                        finalPts = Math.round(streamActPts + (numRaiders * raiderMult));
+                        break;
+                    case CHANNELPOINTS:
+                        long cPoints = (long) ei.get("value");  
+                        double cpMult = tsets.getNumber("channelpoints." + platform.name() + "_mult").doubleValue(); //TODO add this to SettingsLayour
+                        finalPts = Math.round(streamActPts + (cPoints * cpMult));
+                        break;
+                    case LISTED:
                         break;
                 }
+                vb.viewerHandler.addPoints(ei, finalPts, presAct);
                 break;
             case ABSENT:
                 switch (AAct.valueOf(((String) ei.get("action")).toUpperCase())) {
                     case LEAVE:
-
                         break;
                 }
                 break;
             case TECHNICAL:
                 switch (TAct.valueOf(((String) ei.get("action")).toUpperCase())) {
                     case SNAPSHOT:
-
                         break;
                     case POINTS:
-
                         break;
                 }
                 break;
@@ -197,6 +216,8 @@ public class TLogic {
             log.trace("stream offline, skipping processing for watchtime of " + ei.getViewer().getName());
             return true;
         }
+        boolean present = (ei.get("uptype") == UpType.PRESENT);
+
         long timeCountedMs = 0L;
 
         long neededCount = 2;
@@ -212,7 +233,7 @@ public class TLogic {
         
         //consider chain
         long chainTimeoutMs = minsToMs(tsets.getNumber(lurking? "watchtime.lurk_chain" : "watchtime.chain_timeout").longValue());
-        boolean chain = sinceMs < chainTimeoutMs;
+        boolean chain = (sinceMs < chainTimeoutMs) && present;
         
         //consider around time
         long aroundTimeMs = minsToMs(tsets.getNumber("watchtime.around_present").longValue());
@@ -230,7 +251,10 @@ public class TLogic {
         if(lurking) {
             boolean endLurk = false;
             long lurkTimeoutMs = minsToMs(tsets.getNumber("watchtime.lurk_timeout").longValue());
-            if(sinceMs > lurkTimeoutMs) {
+            if(!present) {
+                endLurk = true;
+                log.trace("ending viewer " + ei.getViewer().getName() + " lurk. Viewer is absent from stream.");
+            } else if(sinceMs > lurkTimeoutMs) {
                 endLurk = true;
                 log.trace("ending viewer " + ei.getViewer().getName() + " lurk. timeout: " + lurkTimeoutMs + " time since last: " + sinceMs);
             } else {
@@ -248,10 +272,10 @@ public class TLogic {
         }
 
         //assign points
-        float lurkMult = tsets.getNumber("points.lurk_mult").floatValue(); 
-        float pointsPerHr = tsets.getNumber("points.watchtime").floatValue();
-        float pointsPerS = pointsPerHr / 3600F;
-        long totalPoints = (long) ((timeCountedMs / 60F) * pointsPerS * lurkMult); 
+        double lurkMult = tsets.getNumber("points.lurk_mult").doubleValue(); 
+        double pointsPerHr = tsets.getNumber("points.watchtime").doubleValue();
+        double pointsPerS = pointsPerHr / 3600F;
+        long totalPoints = Math.round((timeCountedMs / 60F) * pointsPerS * lurkMult); 
         vb.viewerHandler.addPoints(ei, totalPoints, Source.WATCHTIME);
         
         return true;

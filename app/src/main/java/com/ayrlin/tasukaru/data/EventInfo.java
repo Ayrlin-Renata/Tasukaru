@@ -36,19 +36,22 @@ public class EventInfo extends InfoObject<EventInfo> {
         }
     }
 
-    public interface Action {}
     public interface Origin {}
+    public interface Action extends Origin {}
 
     /**
      * Present Action
      */
     @AllArgsConstructor
-    public enum PAct implements Action, Origin {
+    public enum PAct implements Action {
         MESSAGE("message"),
         FOLLOW("follow"),
         SUBSCRIBE("subscribe"),
         DONATE("donate"),
-        JOIN("join");
+        JOIN("join"),
+        RAID("raid"),
+        CHANNELPOINTS("channel points"),
+        LISTED("listed");
 
         String str;
 
@@ -92,7 +95,21 @@ public class EventInfo extends InfoObject<EventInfo> {
     @AllArgsConstructor
     public enum Source implements Origin {
         WATCHTIME("watchtime"),
-        COMMAND("command");
+        COMMAND("command"),
+        KOIEVENT("koi");
+
+        String str;
+
+        @Override
+        public String toString() {
+            return str;
+        }
+    }
+
+    @AllArgsConstructor
+    public enum Stream {
+        ONLINE("live"),
+        OFFLINE("offline");
 
         String str;
 

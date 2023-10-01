@@ -57,8 +57,10 @@ public class Tasukaru extends CaffeinatedPlugin {
         addKoiListener(TListener.instance());
 
         //service registration
-        log.trace("registering tasukaru interop service!");
-        registerService("interop", new TasukaruCommandService());
+        // log.trace("registering tasukaru interop service!"); //TODO interop service for VB interface
+        // registerService("interop", new TasukaruCommandService());
+        log.trace("registering tasukaru command service!");
+        registerService("command", new TasukaruCommandService());
         try {
             FastLogger.logStatic(ReflectionLib.getValue(this, "services"));
         } catch (Throwable t) {

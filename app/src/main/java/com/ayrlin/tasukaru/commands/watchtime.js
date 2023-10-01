@@ -1,5 +1,5 @@
 const PAC = "com.ayrlin.tasukaru";
-const SRV = "interop";
+const SRV = "command";
 
 var i = { user: event.sender }
 
