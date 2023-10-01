@@ -19,6 +19,16 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public abstract class InfoObjectHandler<T extends InfoObject<T>> {
 
+    protected FastLogger log;
+    protected VBHandler vb;
+    protected Connection con;
+
+    public InfoObjectHandler() {
+        log = Tasukaru.instance().getLogger();
+        vb = VBHandler.instance();
+        con = vb.getConnection();
+    }
+
     /**
      * adds infoObject to Viewerbase via SQL
      * @param infoObject

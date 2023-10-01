@@ -22,11 +22,7 @@ import com.ayrlin.sqlutil.query.data.OpParamList;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
 import com.ayrlin.sqlutil.query.data.OpParamList.Cnj;
 import com.ayrlin.sqlutil.query.data.Param;
-import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
-import com.ayrlin.tasukaru.data.EventInfo.Origin;
-import com.ayrlin.tasukaru.data.EventInfo.TAct;
-import com.ayrlin.tasukaru.data.EventInfo.UpType;
 import com.ayrlin.tasukaru.data.handler.AccountHandler;
 import com.ayrlin.tasukaru.data.handler.EventHandler;
 import com.ayrlin.tasukaru.data.handler.ViewerHandler;
@@ -34,7 +30,6 @@ import com.ayrlin.tasukaru.data.ViewerInfo;
 import com.ayrlin.tasukaru.data.info.NumInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 
-import co.casterlabs.koi.api.types.user.UserPlatform;
 import lombok.Getter;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -42,21 +37,20 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class VBHandler {
     private static final @Getter String vbVersion = "1.0.0";
     private static final @Getter String vbFilename = "ViewerBase.db";
-    private static VBHandler instance;
     
-    private Connection con;
-    private FastLogger log;
+    public Connection con;
+    public FastLogger log;
     private @Getter String tskrDir;
-    private @Getter ViewerHandler viewerHandler;
+    @Getter
+    public ViewerHandler viewerHandler;
     private @Getter AccountHandler accountHandler;
-    private @Getter EventHandler eventHandler;
+    @Getter
+    public EventHandler eventHandler;
 
-    private VBHandler() {
+    public VBHandler() {
         this.log = Tasukaru.instance().getLogger();
+        log.trace("constructing VBHandler!");
         this.tskrDir = initPluginDir("tasukaru");
-        viewerHandler = new ViewerHandler();
-        accountHandler = new AccountHandler();
-        eventHandler = new EventHandler();
     }
 
     /**
@@ -64,18 +58,24 @@ public class VBHandler {
      * @return THE VBHandler
      */
     public static VBHandler instance() {
-        if(instance == null) {
-            instance = new VBHandler();
+        Tasukaru tskr = Tasukaru.instance();
+        if(tskr.getVbHandler() == null) {
+            Tasukaru.instance().getLogger().severe("VBHandler instance is null!");
         } 
-        return instance;
+        return tskr.getVbHandler();
     }
 
     public void begin() {
+        log.trace("VBHandler begin()");
+        viewerHandler = new ViewerHandler();
+        accountHandler = new AccountHandler();
+        eventHandler = new EventHandler();
         getConnection();
         log.trace("VBHandler is initializing.");
         VBMaintainer vbm = VBMaintainer.instance(log);
         vbm.begin();
         //initialize()
+        log.trace("VBHandler begin() is done!");
     }
 
     public Connection getConnection() {
@@ -134,106 +134,6 @@ public class VBHandler {
     }
 
     ///////////////// VB ACTIONS //////////////////
-
-    public ViewerInfo findViewer(AccountInfo ai) {
-        getConnection();
-        ActiveResult ar = new SelectQuery()
-                .select("id")
-                .from("viewers")
-                .where(SQLUtil.qol(DataType.STRING, ai.get("platform").toString(), Op.EQUAL, ai.get("id")))
-                .execute(con);
-        long vid = -1; 
-        try {
-            if(ar.rs.next()) {
-                vid = ar.rs.getLong("id");
-            }
-        } catch(SQLException e) {
-            SQLUtil.SQLExHandle(e, "exception while finding viewer for account: \n" + ai);
-        } finally {
-            ar.close();
-        }
-        if(vid < 0) {
-            log.warn("unable to find viewer for account: \n" + ai);
-            return null;
-        }
-        return viewerHandler.getFromVB(vid);
-    }
-
-    public UserPlatform getAccountPlatform(Long aid) {
-        ActiveResult ar = new SelectQuery()
-                .select("platform")
-                .from("accounts")
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, aid))
-                .execute(con);
-        String platString = "";
-        try {
-            if(ar.rs.next()) {
-                platString = ar.rs.getString("platform");
-            }
-        } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e, "exception while retrieving platform for account " + aid);
-        } finally {
-            ar.close();
-        }
-        if(platString.isEmpty()) {
-            log.warn("unable to retrieve platform for account " + aid);
-            return null;
-        }
-        log.debug("retrieved platform " + platString + " for account " + aid);
-        return UserPlatform.valueOf(platString);
-    }
-
-    /**
-     * @return AccountId if Account exists,
-     *         -1 if successfully found no Account,
-     *         -2 if errored
-     */
-    public long findAccountId(AccountInfo ai) {
-        getConnection();
-        log.trace("searching for id of Account: \n" + ai);
-
-        List<OpParam> whereList = new ArrayList<>();
-
-        // determine most reliable info
-        if (!((String) ai.get("upid")).isEmpty()) {
-            whereList.add(new OpParam(DataType.STRING, "upid", Op.EQUAL, ai.get("UPID")));
-        } else if (ai.get("platform") != null) {
-            whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, ai.get("platform")));
-            if (!((String) ai.get("userid")).isEmpty()) {
-                whereList.add(new OpParam(DataType.STRING, "userid", Op.EQUAL, ai.get("userId")));
-            } else if (!((String) ai.get("username")).isEmpty()) {
-                whereList.add(new OpParam(DataType.STRING, "username", Op.EQUAL, ai.get("username")));
-            } else if (!((String) ai.get("link")).isEmpty()) {
-                whereList.add(new OpParam(DataType.STRING, "link", Op.EQUAL, ai.get("link")));
-            } else if (!((String) ai.get("displayname")).isEmpty()) {
-                whereList.add(new OpParam(DataType.STRING, "displayname", Op.EQUAL, ai.get("displayname")));
-            } else {
-                //abort
-                log.warn("abort finding Account: \n" + ai);
-                return -2;
-            }
-        } else {
-            log.warn("abort finding Account: \n" + ai);
-            return -2;
-        }
-
-        long accountId;
-        ActiveResult ar = new SelectQuery().select("id").from("accounts").where(whereList).execute(con);
-        try {
-            if (!ar.rs.next() || ar.rs.getLong("id") <= 0 ) {
-                log.warn("unable to find Account: \n" + ai);
-                return -1;
-            }
-            accountId = ar.rs.getLong("id");
-        } catch (SQLException e) {
-            SQLUtil.SQLExHandle(e,"SQLException while finding Account: " + ai);
-            return -2;
-        } finally { ar.close(); }
-
-        ai.set("id", accountId);
-        log.debug("found Account id " + accountId + " for Account: \n" + ai);
-        return accountId;
-    }
 
     public List<Long> listAllAccounts() {
         List<Long> ids = new ArrayList<>();
@@ -349,22 +249,6 @@ public class VBHandler {
                 }
             }
         }
-    }
-
-    public void addPoints(EventInfo ei, Long points, Origin origin) {
-        log.debug("adding " + points + " points to viewer: " + ei.getViewer().getName());
-        
-        ei.getViewer().set("points", (Long) ei.getViewer().get("points") + points);
-        
-        viewerHandler.updateToVB(ei.getViewer());
-        eventHandler.addToVB(new EventInfo()
-                .set("aid", ei.getAccount().get("id"))
-                .set("sid", ei.get("sid"))
-                .set("uptype", UpType.TECHNICAL.toString())
-                .set("action", TAct.POINTS.toString())
-                .set("value", points)
-                .set("origin", origin.toString())
-                .set("streamState", ei.get("streamState")));
     }
 
     /**

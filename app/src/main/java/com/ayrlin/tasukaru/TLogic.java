@@ -31,9 +31,6 @@ public class TLogic {
 
     private TLogic() {
         this.log = Tasukaru.instance().getLogger();
-        this.tsets = Tasukaru.instance().settings();
-        this.vb = VBHandler.instance();
-        this.eh = vb.getEventHandler();
     }
 
     /**
@@ -57,13 +54,19 @@ public class TLogic {
         processWatchtime(ei);
     }
 
+    public void begin() {
+        this.tsets = Tasukaru.instance().settings();
+        this.vb = VBHandler.instance();
+        this.eh = vb.getEventHandler();
+    }
+
     public boolean processEvent(EventInfo ei) {
         log.debug("processing " + ei.get("uptype") + " event for " + ei.get("action") + " of " + ei.getAccount().get("displayname"));
         log.trace(ei);
 
         // find or add account
         AccountHandler ah = vb.getAccountHandler();
-        long accountId = vb.findAccountId(ei.getAccount());
+        long accountId = vb.getAccountHandler().findAccountId(ei.getAccount());
         if (accountId == -2) {
             log.severe("aborting incoming event: error finding account id for event: \n" + ei);
             return false;
@@ -116,7 +119,7 @@ public class TLogic {
         ViewerHandler vh = vb.getViewerHandler();
         if((long) acc.get("vid") <= 0) {
             log.trace("searching for viewer for account " + (long) acc.get("id"));
-            ViewerInfo vi = vb.findViewer(acc);
+            ViewerInfo vi = vb.getViewerHandler().findViewer(acc);
             if(vi == null) {
                 log.debug("unable to find viewer based on account: \n" + acc);
                 long vkey = vh.addViewer(acc);
@@ -160,11 +163,11 @@ public class TLogic {
                     case FOLLOW:
                     case SUBSCRIBE:
                         Long points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.addPoints(ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
+                        vb.viewerHandler.addPoints(vb, ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
                         break;
                     case DONATE:
                         Long d_points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.addPoints(ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
+                        vb.viewerHandler.addPoints(vb, ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
                         // featurecreep: add points based on value
                         break;
                 }
@@ -250,7 +253,7 @@ public class TLogic {
         float pointsPerHr = tsets.getNumber("points.watchtime").floatValue();
         float pointsPerS = pointsPerHr / 3600F;
         long totalPoints = (long) ((timeCountedMs / 60F) * pointsPerS * lurkMult); 
-        vb.addPoints(ei, totalPoints, Source.WATCHTIME);
+        vb.viewerHandler.addPoints(vb, ei, totalPoints, Source.WATCHTIME);
         
         return true;
     }

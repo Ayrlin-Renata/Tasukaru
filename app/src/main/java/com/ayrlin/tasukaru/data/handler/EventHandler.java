@@ -43,8 +43,8 @@ public class EventHandler extends InfoObjectHandler<EventInfo> {
 
     @Override
     public boolean updateToVB(EventInfo infoObject) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateToVB'");
+        Tasukaru.instance().getLogger().warn("attempt to update EventInfo to VB! History should not be changed!");
+        throw new UnsupportedOperationException("PURPOSEFULLY Unimplemented method 'updateToVB'. DO NOT UPDATE HISTORICAL EVENTS. YOU DONT KNOW WHAT THIS COULD DO TO THE GLOBAL TIMELINE EVEN IF THE BUTTERFLY EFFECT IS DEAD");
     }
 
 }

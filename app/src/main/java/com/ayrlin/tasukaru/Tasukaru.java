@@ -3,24 +3,19 @@
  */
 package com.ayrlin.tasukaru;
 
+import com.ayrlin.tasukaru.services.TasukaruCommandService;
+
 import co.casterlabs.caffeinated.pluginsdk.*;
+import lombok.Getter;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
+import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @CaffeinatedPluginImplementation
 public class Tasukaru extends CaffeinatedPlugin {
     private static Tasukaru instance = null;
+    private @Getter VBHandler vbHandler = null;
 
     private FastLogger log;
-
-    public Tasukaru() {
-        super();
-        log = this.getLogger();
-        if(instance != null) {
-            log.warn("THROWING EXCEPTION FOR DUPLICATE TASUKARU");
-            throw new RuntimeException("use Tasukaru.instance(), DO NOT CONSTRUCT THIS A SECOND TIME :3");
-        }
-        instance = this;
-    }
 
     /**
      * use this singleton dont construct another
@@ -28,25 +23,48 @@ public class Tasukaru extends CaffeinatedPlugin {
      */
     public static Tasukaru instance() {
         if(instance == null) {
-            instance = new Tasukaru();
+            throw new IllegalStateException("Wait for tskr to be initialized first!");
         }
         return instance;
     }
 
     @Override
     public void onInit() {
+        log = this.getLogger();
+        if(instance != null) {
+            log.warn("Second OnInit for duplicate tskr!!");
+        }
+        instance = this;
+
         log.debug("Tasukaru onInit()");
         log.info("I'm saved :3");
 
+        // database init
+        log.trace("initializing VBHandler!");
+        vbHandler = new VBHandler();
+        vbHandler.begin();
+
         //settings applet
+        log.trace("creating Settings Applet!");
         this.createSettingsApplet();
         TSettings.instance().begin();
 
-        // database init
-        VBHandler.instance().begin();
+        //TLogic init
+        TLogic.instance().begin();
 
         // listener registration
+        log.trace("registering tasukaru koi listener!");
         addKoiListener(TListener.instance());
+
+        //service registration
+        log.trace("registering tasukaru interop service!");
+        registerService("interop", new TasukaruCommandService());
+        try {
+            FastLogger.logStatic(ReflectionLib.getValue(this, "services"));
+        } catch (Throwable t) {
+            log.severe("Exception checking registered service: " + t.getMessage());
+            t.printStackTrace();
+        }
     }
 
     

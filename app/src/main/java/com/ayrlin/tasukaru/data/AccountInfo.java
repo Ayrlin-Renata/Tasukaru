@@ -48,7 +48,7 @@ public class AccountInfo extends InfoObject<AccountInfo> {
 
     public AccountInfo(AccountInfo ai) {
         this();
-        this.data = ai.data; //this will definately work. TODO you know to come back here if it dont work
+        this.data = ai.data; 
     }
 
     protected Map<String,Info<?>> definition() {

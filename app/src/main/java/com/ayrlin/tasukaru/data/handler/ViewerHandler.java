@@ -1,34 +1,32 @@
 package com.ayrlin.tasukaru.data.handler;
 
-import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
 import com.ayrlin.sqlutil.query.InsertIntoQuery;
+import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.UpdateQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
-import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.VBHandler;
 import com.ayrlin.tasukaru.data.AccountInfo;
+import com.ayrlin.tasukaru.data.EventInfo;
+import com.ayrlin.tasukaru.data.EventInfo.Origin;
+import com.ayrlin.tasukaru.data.EventInfo.TAct;
+import com.ayrlin.tasukaru.data.EventInfo.UpType;
 import com.ayrlin.tasukaru.data.ViewerInfo;
 import com.ayrlin.tasukaru.data.info.Info;
 
-import lombok.NoArgsConstructor;
-import xyz.e3ndr.fastloggingframework.logging.FastLogger;
-
-@NoArgsConstructor
 public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
 
     @Override
     public long addToVB(ViewerInfo vi) {
-        VBHandler vb = VBHandler.instance();
-        Connection con = vb.getConnection();
-        FastLogger log = Tasukaru.instance().getLogger();
         log.trace("Adding viewer: \n" + vi);
 
         List<Param> params = new ArrayList<>();
@@ -98,9 +96,6 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
 
     @Override
     public boolean updateToVB(ViewerInfo vi) {
-        VBHandler vb = VBHandler.instance();
-        Connection con = vb.getConnection();
-        FastLogger log = Tasukaru.instance().getLogger();
         log.trace("updating viewer: \n" + vi);
 
         List<Param> params = new ArrayList<>();
@@ -110,7 +105,7 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         params.add(new Param(DataType.INT, "watchtime", vi.get("watchtime")));
         params.add(new Param(DataType.INT, "points", vi.get("points")));
         for(Long aid : vi.getAccountIds()) {
-            params.add(new Param(DataType.INT, vb.getAccountPlatform(aid).name(), aid));
+            params.add(new Param(DataType.INT, vb.getAccountHandler().getAccountPlatform(aid).name(), aid));
         }
 
         boolean result = new UpdateQuery()
@@ -140,8 +135,47 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         return key;
     }
 
-    // public void getViewerAccounts(ViewerInfo viewer) {
-    //     //TODO
-    //     //viewer.accountIds = 
-    // }
+    /**
+     * gets viewer based on account
+     * @param ai account assumed filled
+     * @return ViewerInfo
+     */
+    public ViewerInfo findViewer(AccountInfo ai) {
+        ActiveResult ar = new SelectQuery()
+                .select("id")
+                .from("viewers")
+                .where(SQLUtil.qol(DataType.STRING, ai.get("platform").toString(), Op.EQUAL, ai.get("id")))
+                .execute(con);
+        long vid = -1; 
+        try {
+            if(ar.rs.next()) {
+                vid = ar.rs.getLong("id");
+            }
+        } catch(SQLException e) {
+            SQLUtil.SQLExHandle(e, "exception while finding viewer for account: \n" + ai);
+        } finally {
+            ar.close();
+        }
+        if(vid < 0) {
+            log.warn("unable to find viewer for account: \n" + ai);
+            return null;
+        }
+        return getFromVB(vid);
+    }
+
+    public void addPoints(VBHandler vbHandler, EventInfo ei, Long points, Origin origin) {
+        log.debug("adding " + points + " points to viewer: " + ei.getViewer().getName());
+        
+        ei.getViewer().set("points", (Long) ei.getViewer().get("points") + points);
+        
+        updateToVB(ei.getViewer());
+        vb.eventHandler.addToVB(new EventInfo()
+                .set("aid", ei.getAccount().get("id"))
+                .set("sid", ei.get("sid"))
+                .set("uptype", UpType.TECHNICAL.toString())
+                .set("action", TAct.POINTS.toString())
+                .set("value", points)
+                .set("origin", origin.toString())
+                .set("streamState", ei.get("streamState")));
+    }
 }
