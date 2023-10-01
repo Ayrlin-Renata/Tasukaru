@@ -8,34 +8,25 @@ import java.util.Map;
 
 import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
-import com.ayrlin.sqlutil.query.InsertIntoQuery;
 import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.UpdateQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
-import com.ayrlin.tasukaru.VBHandler;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
 import com.ayrlin.tasukaru.data.EventInfo.Origin;
 import com.ayrlin.tasukaru.data.EventInfo.TAct;
 import com.ayrlin.tasukaru.data.EventInfo.UpType;
 import com.ayrlin.tasukaru.data.ViewerInfo;
-import com.ayrlin.tasukaru.data.info.Info;
 
 public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
 
     @Override
     public long addToVB(ViewerInfo vi) {
-        log.trace("Adding viewer: \n" + vi);
+        long key = addToVBHelper("viewers", vi);
+        if(key < 0) return -1;
 
-        List<Param> params = new ArrayList<>();
-        for(Info<?> i : vi.getData().values()) {
-            params.add(i.getParam());
-        }
-        
-        long key = new InsertIntoQuery().insertInto("viewers").values(params).execute(con);
-        log.debug("added viewer: \n" + vi);
         log.trace("updating viewer accounts: \n" + vi.getAccountIds());
         AccountHandler aih = vb.getAccountHandler();
         for(AccountInfo ai : aih.getFromVB(vi.getAccountIds())) {
@@ -163,7 +154,7 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         return getFromVB(vid);
     }
 
-    public void addPoints(VBHandler vbHandler, EventInfo ei, Long points, Origin origin) {
+    public void addPoints(EventInfo ei, Long points, Origin origin) {
         log.debug("adding " + points + " points to viewer: " + ei.getViewer().getName());
         
         ei.getViewer().set("points", (Long) ei.getViewer().get("points") + points);

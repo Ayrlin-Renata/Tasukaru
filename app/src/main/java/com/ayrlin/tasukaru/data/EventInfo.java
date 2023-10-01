@@ -14,14 +14,13 @@ import com.ayrlin.tasukaru.data.info.TimeInfo;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 @ToString(callSuper = true)
 public class EventInfo extends InfoObject<EventInfo> {
 
     private @Getter AccountInfo account;
-    private @Getter @Setter ViewerInfo viewer;
+    private @Getter ViewerInfo viewer;
 
     @AllArgsConstructor
     public enum UpType {
@@ -92,7 +91,8 @@ public class EventInfo extends InfoObject<EventInfo> {
 
     @AllArgsConstructor
     public enum Source implements Origin {
-        WATCHTIME("watchtime");
+        WATCHTIME("watchtime"),
+        COMMAND("command");
 
         String str;
 
@@ -139,6 +139,11 @@ public class EventInfo extends InfoObject<EventInfo> {
         this.account = ai;
         this.set("aid", ai.get("id"));
         //this.set("sid", ai.get("latestsnapshot"));
+        return this;
+    }
+
+    public EventInfo setViewer(ViewerInfo vi) {
+        this.viewer = vi;
         return this;
     }
 }

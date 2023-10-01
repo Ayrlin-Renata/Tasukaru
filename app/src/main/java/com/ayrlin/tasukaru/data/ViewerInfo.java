@@ -33,7 +33,7 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
         def.put("fallbackname", new StringInfo());
         def.put("watchtime", new NumInfo());
         def.put("points", new NumInfo());
-        def.put("lurking", new StringInfo());
+        def.put("lurking", new StringInfo().setDefault(String.valueOf(false)));
 
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
             def.put(plat.name().toLowerCase(), new NumInfo());

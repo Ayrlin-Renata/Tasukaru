@@ -32,21 +32,21 @@ public class TListener implements KoiEventListener {
         return instance;
     }
 
-    @KoiEventHandler
-    public void onViewerCount(ViewerCountEvent e) {
-        log.debug("Tasukaru recieved ViewerCountEvent.");
-        log.trace(e);
-    }
+    // @KoiEventHandler
+    // public void onViewerCount(ViewerCountEvent e) {
+    //     log.debug("Tasukaru recieved ViewerCountEvent.");
+    //     log.trace(e);
+    // }
 
     @KoiEventHandler
-    public void onViewerList(ViewerListEvent e) {
+    public void onViewerList(ViewerListEvent e) { //todo list
         log.debug("Tasukaru recieved ViewerListEvent.");
         log.trace(e);
 
     }
 
     @KoiEventHandler
-    public void onViewerJoin(ViewerJoinEvent e) {
+    public void onViewerJoin(ViewerJoinEvent e) { //todo join
         log.debug("Tasukaru recieved ViewerJoinEvent.");
         log.trace(e);
         AccountInfo tskrViewerData = new AccountInfo(e.getViewer());
@@ -123,7 +123,7 @@ public class TListener implements KoiEventListener {
     }
 
     @KoiEventHandler
-    public void onChannelPoints(ChannelPointsEvent e) {
+    public void onChannelPoints(ChannelPointsEvent e) { //todo
         log.debug("Tasukaru recieved ChannelPointsEvent.");
         log.trace(e);
     }
@@ -144,7 +144,7 @@ public class TListener implements KoiEventListener {
     // }
 
     // @KoiEventHandler
-    // public void onLike(LikeEvent e) {
+    // public void onLike(LikeEvent e) { 
     // log.debug("Tasukaru recieved LikeEvent.");
 
     // }
@@ -164,17 +164,11 @@ public class TListener implements KoiEventListener {
     // }
 
     // @KoiEventHandler
-    // public void onRaid(RaidEvent e) {
+    // public void onRaid(RaidEvent e) { //TODO based on raider number?
     // log.debug("Tasukaru recieved RaidEvent.");
 
     // }
 
-    // // for messages and also donations
-    // @KoiEventHandler
-    // public void onRichMessage(RichMessageEvent e) {
-    // log.debug("Tasukaru recieved RichMessageEvent.");
-
-    // }
 
     // // "room state is for things like follower only mode, emote only, etc"
     // @KoiEventHandler

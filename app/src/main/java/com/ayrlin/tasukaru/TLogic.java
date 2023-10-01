@@ -113,13 +113,14 @@ public class TLogic {
             }
             //update ei
             ei.set("aid", acc.get("id"));
-            ei.set("sid", (int) vb.findLatestSnapshot((long) acc.get("id")));
+            ei.set("sid", (long) vb.findLatestSnapshot((long) acc.get("id")));
         }
         // find or add viewer
         ViewerHandler vh = vb.getViewerHandler();
+        ViewerInfo vi;
         if((long) acc.get("vid") <= 0) {
             log.trace("searching for viewer for account " + (long) acc.get("id"));
-            ViewerInfo vi = vb.getViewerHandler().findViewer(acc);
+            vi = vb.getViewerHandler().findViewer(acc);
             if(vi == null) {
                 log.debug("unable to find viewer based on account: \n" + acc);
                 long vkey = vh.addViewer(acc);
@@ -130,14 +131,12 @@ public class TLogic {
                 log.debug("fetching newly added viewer \n" + vkey);
                 vi = vh.getFromVB(vkey);
             }
-            acc.set("vid", (long) vi.get("id"));
-            ei.setViewer(vi);
         } else {
             log.trace("fetching viewer for account " + (long) acc.get("id") + " with vid " + (long) acc.get("vid"));
-            ViewerInfo vi = vh.getFromVB((long) acc.get("vid"));
-            acc.set("vid", (long) vi.get("id"));
-            ei.setViewer(vi);
+            vi = vh.getFromVB((long) acc.get("vid"));
         }
+        acc.set("vid", (long) vi.get("id"));
+        ei.setViewer(vi);
 
         // follow through with event actions
         if (processEventActions(ei)) {
@@ -163,11 +162,11 @@ public class TLogic {
                     case FOLLOW:
                     case SUBSCRIBE:
                         Long points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.viewerHandler.addPoints(vb, ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
+                        vb.viewerHandler.addPoints(ei, (long) (points * (offline? offlineTotalMult : 1F)), presAct);
                         break;
                     case DONATE:
                         Long d_points = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
-                        vb.viewerHandler.addPoints(vb, ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
+                        vb.viewerHandler.addPoints(ei, (long) (d_points * (offline? offlineTotalMult : 1F)), presAct);
                         // featurecreep: add points based on value
                         break;
                 }
@@ -253,7 +252,7 @@ public class TLogic {
         float pointsPerHr = tsets.getNumber("points.watchtime").floatValue();
         float pointsPerS = pointsPerHr / 3600F;
         long totalPoints = (long) ((timeCountedMs / 60F) * pointsPerS * lurkMult); 
-        vb.viewerHandler.addPoints(vb, ei, totalPoints, Source.WATCHTIME);
+        vb.viewerHandler.addPoints(ei, totalPoints, Source.WATCHTIME);
         
         return true;
     }

@@ -7,9 +7,11 @@ import java.util.List;
 
 import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
+import com.ayrlin.sqlutil.query.InsertIntoQuery;
 import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.VBHandler;
 import com.ayrlin.tasukaru.data.InfoObject;
@@ -46,6 +48,27 @@ public abstract class InfoObjectHandler<T extends InfoObject<T>> {
             ts.add(this.getFromVB(id));
         }
         return ts;
+    }
+
+    protected long addToVBHelper(String table, T info) {
+        log.trace("Adding to " + table + " table: \n" + info);
+
+        List<Param> params = new ArrayList<>();
+        for(Info<?> i : info.getData().values()) {
+            if(i.getName().equals("id") && i.atDefault()) {
+                continue;
+            }
+            params.add(i.getParam());
+        }
+        long key = new InsertIntoQuery().insertInto(table).values(params).execute(con);
+        
+        log.debug("added to table " + table + ": \n" + info);
+
+        if(key < 0) {
+            log.severe("failed to add to " + table + " table: \n" + info);
+            return -1;
+        } 
+        return key;
     }
 
     protected T getFromVBHelper(String table, long id, T info) {

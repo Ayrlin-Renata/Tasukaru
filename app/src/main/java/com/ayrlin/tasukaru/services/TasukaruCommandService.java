@@ -5,12 +5,16 @@ import java.util.List;
 import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.VBHandler;
 import com.ayrlin.tasukaru.data.AccountInfo;
+import com.ayrlin.tasukaru.data.EventInfo;
 import com.ayrlin.tasukaru.data.ViewerInfo;
+import com.ayrlin.tasukaru.data.EventInfo.Source;
 import com.ayrlin.tasukaru.data.handler.AccountHandler;
 import com.ayrlin.tasukaru.data.handler.ViewerHandler;
 
 import co.casterlabs.commons.functional.tuples.Triple;
 import co.casterlabs.koi.api.types.user.User;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.TypeToken;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TasukaruCommandService implements TasukaruInterop {
@@ -19,6 +23,8 @@ public class TasukaruCommandService implements TasukaruInterop {
     private ViewerHandler vh;
     private AccountHandler ah;
     private FastLogger log;
+    private ViewerInfo viewer;
+    private AccountInfo account;
 
     public TasukaruCommandService() {
         this.vb = VBHandler.instance();
@@ -28,34 +34,105 @@ public class TasukaruCommandService implements TasukaruInterop {
         log.debug("tasukaru commmand service instantiated!");
     }
 
+    
+    @Override
+    public void setIdentity(Identity i) {
+        if(i.clID != null) {
+            //vi = vb.getByClID(i.getClID());
+            log.warn("using unimplemented features (clId) in Identity!" + i);
+        }
+        User user = i.user;
+        if(user != null) {
+            account = ah.getFromVB(ah.findAccountId(new AccountInfo(user)));
+        } else if(i.username != null && i.platform != null) {
+            account = ah.getFromVB(ah.findAccountId(new AccountInfo()
+                .set("username", i.username)
+                .set("platform", i.platform.name())));
+        } else {
+            log.severe("identity is empty! Halting setIdentity() \n" + i);
+            return;
+        }
+        viewer = vh.findViewer(account);
+        if(viewer == null) {
+            log.severe("unable to find viewer based on Identity!" + i);
+        }
+    }
+
+    public void setIdentity(String json) {
+        log.trace("command service recieved identity: \n" + json);
+
+        Identity i;
+        try {
+            i = Rson.DEFAULT.fromJson(json, new TypeToken<Identity>() {});
+        } catch (Exception e) {
+            log.severe("unable to deserialize Identity during command call: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
+        setIdentity(i);
+    }
+
+
     @Override
     public long checkPoints(Identity i) {
-        ViewerInfo vi = processIdentity(i);
-        return (long) vi.get("points");
+        setIdentity(i);
+        return checkPoints();
     }
+
+    @Override
+    public long checkPoints() {
+        return (long) viewer.get("points");
+    }
+
 
     @Override
     public long checkWatchtime(Identity i) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'checkWatchtime'");
+        setIdentity(i);
+        return checkWatchtime();
     }
 
     @Override
+    public long checkWatchtime() {
+        return (long) viewer.get("watchtime");
+    }
+
+
+    @Override
     public void addPoints(Identity i, long amount) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addPoints'");
+        setIdentity(i);
+        addPoints(amount);
+    }
+
+    @Override
+    public void addPoints(long amount) {
+        EventInfo ei = new EventInfo()
+                .setViewer(viewer)
+                .setAccount(account)
+                .set("sid", vb.findLatestSnapshot((long) account.get("id")));
+        vh.addPoints(ei, amount, Source.COMMAND);
     }
 
     @Override
     public void setPoints(Identity i, long amount) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setPoints'");
+        setIdentity(i);
+        setPoints(amount);
+    }
+
+    @Override
+    public void setPoints(long amount) {
+        addPoints((0 - (long) viewer.get("points")) + amount);
     }
 
     @Override
     public void setLurk(Identity i, boolean lurking) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setLurk'");
+        setIdentity(i);
+        setLurk(lurking);
+    }
+
+    @Override
+    public void setLurk(boolean lurking) {
+        viewer.set("lurking", String.valueOf(false));
+        vh.updateToVB(viewer);
     }
 
     @Override
@@ -80,28 +157,6 @@ public class TasukaruCommandService implements TasukaruInterop {
     public boolean accountUnlinkRequest(Identity sender, String platform) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'accountUnlinkRequest'");
-    }
-
-    private ViewerInfo processIdentity(Identity i) {
-        ViewerInfo vi = null;
-        if(i.clID != null) {
-            //vi = vb.getByClID(i.getClID());
-            log.warn("using unimplemented features (clId) in Identity!" + i);
-        }
-        User user = i.user;
-        if(user != null) {
-            vi = vh.findViewer(ah.getFromVB(ah.findAccountId(new AccountInfo(user))));
-        } else if(i.username != null && i.platform != null) {
-            vi = vh.findViewer(ah.getFromVB(ah.findAccountId(new AccountInfo()
-                .set("username", i.username)
-                .set("platform", i.platform.name()))));
-        } else {
-            log.severe("identity is empty!" + i);
-        }
-        if(vi == null) {
-            log.severe("unable to find viewer based on Identity!" + i);
-        }
-        return vi;
     }
     
 }

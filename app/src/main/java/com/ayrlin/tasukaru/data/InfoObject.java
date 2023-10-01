@@ -20,7 +20,7 @@ public abstract class InfoObject<T extends InfoObject<T>> {
         key = key.toLowerCase();
         if(data.containsKey(key)) {
             if(data.get(key) instanceof NumInfo) {
-                ((NumInfo) data.get(key)).setValue((Long) value); 
+                ((NumInfo) data.get(key)).setValue(Long.valueOf(value.toString())); 
             } else if (data.get(key) instanceof StringInfo) {
                 ((StringInfo) data.get(key)).setValue(value.toString()); 
             } else if (data.get(key) instanceof TimeInfo) {

@@ -25,19 +25,8 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
 
     @Override
     public long addToVB(AccountInfo ai) {
-        
-        log.debug("Adding Account: \n" + ai);
-
-        List<Param> params = new ArrayList<>();
-        for(Info<?> i : ai.getData().values()) {
-            params.add(i.getParam());
-        }
-
-        long key = SQLUtil.insert(con, "accounts", params);
-        if(key < 0) {
-            log.severe("failed to add Account: \n" + ai);
-            return -1;
-        } 
+        long key = addToVBHelper("accounts", ai);
+        if(key < 0) return -1;
 
         //add snapshot after Account for foreign key
         ai.set("id", key);
