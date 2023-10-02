@@ -1,6 +1,8 @@
 package com.ayrlin.tasukaru;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
@@ -35,6 +37,7 @@ public class TSettings {
     }
 
     public boolean begin() {
+        //TODO pre-render settings to avoid unset settings issues
         // try {
         //     tskr.setSettings(new JsonObject()); // DEBUG RESET
         // } catch( Throwable t) {
@@ -73,13 +76,18 @@ public class TSettings {
         // POINTS
         WidgetSettingsSection sectionPoints = new WidgetSettingsSection("points","points");
 
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("watchtime", "points per hour watched", 0, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        sectionPoints.addItem(WidgetSettingsItem.asNumber("watchtime", "points per hour watched", 100, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
         // offline multipliers
         sectionPoints.addItem(WidgetSettingsItem.asNumber("offline_bonus_mult", "offline bonus multiplier", 2, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
         sectionPoints.addItem(WidgetSettingsItem.asNumber("offline_chat_mult", "offline chat bonus multiplier", 0.25, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
         // lurk multiplier
         sectionPoints.addItem(WidgetSettingsItem.asNumber("lurk_mult", "lurk multiplier", 1.25, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        
+        //raider_bonus
+        sectionPoints.addItem(WidgetSettingsItem.asNumber("raider_bonus", "host bonus per raider", 100, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        //dono_per_unit
+        sectionPoints.addItem(WidgetSettingsItem.asNumber("dono_per_unit", "donation bonus per USD", 100, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
+
+
         tLayout.addSection(sectionPoints);
         
         // BONUSES
@@ -108,23 +116,22 @@ public class TSettings {
                     }
                 }
             } else {
-                for(PAct p : PAct.values()) {
-                    sectionBonuses.addItem(WidgetSettingsItem.asNumber(s_platforms + "_" + p.name(), p.toString() + " point bonus", 0, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
+                List<WidgetSettingsItem> wsil = getPlatformBonusItems(s_platforms);
+                for(WidgetSettingsItem wsi : wsil) {
+                    sectionBonuses.addItem(wsi);
                 }
             }
 
         }
         tLayout.addSection(sectionBonuses);
 
-        // // ALL BONUSES
-        // WidgetSettingsSection sectionBonusesAll = new WidgetSettingsSection("bonuses_all","all bonuses");
+        // ALL BONUSES
+        WidgetSettingsSection sectionChannelPoints = new WidgetSettingsSection("channelpoints","platform points");
 
-        // for(String plat : TLogic.instance().getSupportedPlatforms()) {
-        //     for(PAct p : PAct.values()) {
-        //         sectionBonusesAll.addItem(WidgetSettingsItem.asNumber(plat + "_" + p.name(), plat + " " + p.toString(), 0, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        //     }
-        // }
-        // tLayout.addSection(sectionBonusesAll);
+        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+            sectionChannelPoints.addItem(WidgetSettingsItem.asNumber(plat.name() + "_mult", plat.toString() + " pts conversion multi.", 0, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        }
+        tLayout.addSection(sectionChannelPoints);
 
         // WATCHTIME
         WidgetSettingsSection sectionWatchtime = new WidgetSettingsSection("watchtime","watchtime");
@@ -152,6 +159,39 @@ public class TSettings {
         tLayout.addSection(sectionBehaviours);
         
         tskr.setSettingsLayout(tLayout);
+    }
+
+    private List<WidgetSettingsItem> getPlatformBonusItems(String s_platforms) {
+        List<WidgetSettingsItem> wsil = new ArrayList<>();
+        for(PAct p : PAct.values()) {
+            double defaultPoints = 0D;
+            switch(p) {
+                case CHANNELPOINTS:
+                    defaultPoints = 5D;
+                    break;
+                case DONATE:
+                    defaultPoints = 100D;
+                    break;
+                case FOLLOW:
+                    defaultPoints = 100D;
+                    break;
+                case JOIN:
+                    break;
+                case LISTED:
+                    break;
+                case MESSAGE:
+                    defaultPoints = 5D;
+                    break;
+                case RAID:
+                    defaultPoints = 500D;
+                    break;
+                case SUBSCRIBE:
+                    defaultPoints = 500D;
+                    break;
+            }
+            wsil.add(WidgetSettingsItem.asNumber(s_platforms + "_" + p.name(), p.toString() + " point bonus", defaultPoints, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        }
+        return wsil;
     }
 
     public void onSettingsUpdate() {

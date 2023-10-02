@@ -175,17 +175,17 @@ public class TLogic {
                             break;
                         }
                         double value = transposedValue / 1000D; //TODO value is multiplied by 1000 bc i cant record doubles in VB rn aaa RIP
-                        double pointsPerUnit = tsets.getNumber("points.dono_per_unit").doubleValue();   //TODO add this to SettingsLayour
+                        double pointsPerUnit = tsets.getNumber("points.dono_per_unit").doubleValue();
                         finalPts = Math.round(streamActPts + (value * pointsPerUnit));
                         break;
                     case RAID: 
                         long numRaiders = (long) ei.get("value");  
-                        double raiderMult = tsets.getNumber("points.raider_bonus").doubleValue(); //TODO add this to SettingsLayour
+                        double raiderMult = tsets.getNumber("points.raider_bonus").doubleValue();
                         finalPts = Math.round(streamActPts + (numRaiders * raiderMult));
                         break;
                     case CHANNELPOINTS:
                         long cPoints = (long) ei.get("value");  
-                        double cpMult = tsets.getNumber("channelpoints." + platform.name() + "_mult").doubleValue(); //TODO add this to SettingsLayour
+                        double cpMult = tsets.getNumber("channelpoints." + platform.name() + "_mult").doubleValue();
                         finalPts = Math.round(streamActPts + (cPoints * cpMult));
                         break;
                     case LISTED:
