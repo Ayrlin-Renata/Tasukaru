@@ -17,7 +17,7 @@ import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.TypeToken;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
-public class TasukaruCommandService implements TasukaruInterop {
+public class TasukaruCommandService implements TasukaruCmdSrv {
 
     private VBHandler vb;
     private ViewerHandler vh;

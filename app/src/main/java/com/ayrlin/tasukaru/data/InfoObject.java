@@ -19,35 +19,39 @@ public abstract class InfoObject<T extends InfoObject<T>> {
     public T set(String key, Object value) {
         key = key.toLowerCase();
         if(data.containsKey(key)) {
-            if(data.get(key) instanceof LongInfo) {
-                ((LongInfo) data.get(key)).setValue(((Number) value).longValue()); 
-            } else if (data.get(key) instanceof RealInfo) {
-                ((RealInfo) data.get(key)).setValue(((Number) value).doubleValue()); 
-            } else if (data.get(key) instanceof BoolInfo) {
-                ((BoolInfo) data.get(key)).setValue((boolean) value); 
-            } else if (data.get(key) instanceof StringInfo) {
-                ((StringInfo) data.get(key)).setValue(value.toString()); 
-            } else if (data.get(key) instanceof TimeInfo) {
-                ((TimeInfo) data.get(key)).setValue((Timestamp) value); 
-            } else if (data.get(key) instanceof JsonInfo) {
-                if (value instanceof String) {
-                    ((JsonInfo) data.get(key)).valueFromString((String) value);
-                } else {
-                    ((JsonInfo) data.get(key)).setValue((Object) value); 
-                }
-            } else if (data.get(key) instanceof RolesListInfo) {
-                if (value instanceof String) {
-                    ((RolesListInfo) data.get(key)).valueFromString((String) value);
-                } else {
-                    ((RolesListInfo) data.get(key)).setValue((List<UserRoles>) value); 
-                }
-            } else if (data.get(key) instanceof StringListInfo) {
-                if (value instanceof String) {
-                    ((StringListInfo) data.get(key)).valueFromString((String) value);
-                } else {
-                    ((StringListInfo) data.get(key)).setValue((List<String>) value); 
-                }
-            } 
+            try {
+                if(data.get(key) instanceof LongInfo) {
+                    ((LongInfo) data.get(key)).setValue(((Number) value).longValue()); 
+                } else if (data.get(key) instanceof RealInfo) {
+                    ((RealInfo) data.get(key)).setValue(((Number) value).doubleValue()); 
+                } else if (data.get(key) instanceof BoolInfo) {
+                    ((BoolInfo) data.get(key)).setValue((boolean) value); 
+                } else if (data.get(key) instanceof StringInfo) {
+                    ((StringInfo) data.get(key)).setValue(value.toString()); 
+                } else if (data.get(key) instanceof TimeInfo) {
+                    ((TimeInfo) data.get(key)).setValue((Timestamp) value); 
+                } else if (data.get(key) instanceof JsonInfo) {
+                    if (value instanceof String) {
+                        ((JsonInfo) data.get(key)).valueFromString((String) value);
+                    } else {
+                        ((JsonInfo) data.get(key)).setValue((Object) value); 
+                    }
+                } else if (data.get(key) instanceof RolesListInfo) {
+                    if (value instanceof String) {
+                        ((RolesListInfo) data.get(key)).valueFromString((String) value);
+                    } else {
+                        ((RolesListInfo) data.get(key)).setValue((List<UserRoles>) value); 
+                    }
+                } else if (data.get(key) instanceof StringListInfo) {
+                    if (value instanceof String) {
+                        ((StringListInfo) data.get(key)).valueFromString((String) value);
+                    } else {
+                        ((StringListInfo) data.get(key)).setValue((List<String>) value); 
+                    }
+                } 
+            } catch(ClassCastException e) {
+                Tasukaru.instance().getLogger().severe("value passed to InfoObject is of incorrect class! expected: " + data.get("key").getDatatype().getTypeClass().toGenericString() + "\nRecieved: " + value.toString());
+            }
         }
         return (T) this;
     }

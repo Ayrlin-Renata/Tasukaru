@@ -11,16 +11,13 @@ import com.ayrlin.sqlutil.SQLUtil;
 import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.UpdateQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
-import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
 import com.ayrlin.tasukaru.data.EventInfo.Origin;
 import com.ayrlin.tasukaru.data.EventInfo.TAct;
 import com.ayrlin.tasukaru.data.EventInfo.UpType;
-
-import co.casterlabs.koi.api.types.user.UserPlatform;
-
 import com.ayrlin.tasukaru.data.ViewerInfo;
 
 public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
@@ -138,7 +135,7 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         ActiveResult ar = new SelectQuery()
                 .select("id")
                 .from("viewers")
-                .where(SQLUtil.qol(DataType.LONG, ((UserPlatform) ai.get("platform")).toString(), Op.EQUAL, (long) ai.get("id")))
+                .where(SQLUtil.qol(DataType.LONG, ai.get("platform").toString(), Op.EQUAL, (long) ai.get("id")))
                 .execute(con);
         long vid = -1; 
         try {
@@ -170,7 +167,7 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
                 .set("action", TAct.POINTS.toString())
                 .set("value", points)
                 .set("origin", origin.toString())
-                .set("processed", 1)
+                .set("processed", true)
                 .set("streamState", ei.get("streamState")));
     }
 }

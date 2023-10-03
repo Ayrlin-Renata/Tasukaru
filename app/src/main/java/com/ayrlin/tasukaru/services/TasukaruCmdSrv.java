@@ -8,7 +8,7 @@ import co.casterlabs.koi.api.types.user.UserPlatform;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import lombok.ToString;
 
-public interface TasukaruInterop {
+public interface TasukaruCmdSrv {
 
     /**
      * Represents a unique user account. A helper to make various forms of valid identification easier to use across all interop functions. 
