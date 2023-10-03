@@ -109,6 +109,7 @@ public class TListener implements KoiEventListener {
                 .set("uptype", up)
                 .set("action", act)
                 .set("origin", Source.KOIEVENT)
+                .set("event", e)
                 .set("streamState", tl.streamLive(user.getPlatform())? Stream.ONLINE : Stream.OFFLINE);
         if(!novalue) ei.set("value", value.doubleValue());
         tl.incoming(ei);

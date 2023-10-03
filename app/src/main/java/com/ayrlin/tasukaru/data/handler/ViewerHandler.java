@@ -170,6 +170,7 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
                 .set("action", TAct.POINTS.toString())
                 .set("value", points)
                 .set("origin", origin.toString())
+                .set("processed", 1)
                 .set("streamState", ei.get("streamState")));
     }
 }
