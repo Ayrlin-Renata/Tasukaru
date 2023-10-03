@@ -9,10 +9,11 @@ import java.util.Objects;
 
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.tasukaru.Tasukaru;
+import com.ayrlin.tasukaru.data.info.BoolInfo;
 import com.ayrlin.tasukaru.data.info.Info;
 import com.ayrlin.tasukaru.data.info.RolesListInfo;
 import com.ayrlin.tasukaru.data.info.StringListInfo;
-import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.LongInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 
 import co.casterlabs.koi.api.types.user.User;
@@ -53,9 +54,9 @@ public class AccountInfo extends InfoObject<AccountInfo> {
 
     protected Map<String,Info<?>> definition() {
         Map<String,Info<?>> def = new HashMap<>();
-        def.put("id", new NumInfo());
-        def.put("vid", new NumInfo());
-        def.put("latestsnapshot", new NumInfo());
+        def.put("id", new LongInfo());
+        def.put("vid", new LongInfo());
+        def.put("latestsnapshot", new LongInfo());
         def.put("userid", new StringInfo());
         def.put("channelid", new StringInfo().setDefault("-1"));
         def.put("platform", new StringInfo());
@@ -68,8 +69,9 @@ public class AccountInfo extends InfoObject<AccountInfo> {
         def.put("bio", new StringInfo());
         def.put("link", new StringInfo());
         def.put("imagelink", new StringInfo());
-        def.put("followerscount", new NumInfo());
-        def.put("subcount", new NumInfo());
+        def.put("followerscount", new LongInfo());
+        def.put("subcount", new LongInfo());
+        def.put("mod", new BoolInfo());
 
         for(Info<?> i : def.values()) {
             for(Entry<String, Info<?>> entry : def.entrySet()) {

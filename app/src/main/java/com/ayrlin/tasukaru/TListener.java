@@ -56,7 +56,7 @@ public class TListener implements KoiEventListener {
     @KoiEventHandler
     public void onRichMessage(RichMessageEvent e) {
         if(!e.getDonations().isEmpty()) {
-            long donoValue = 0L;
+            double donoValue = 0D;
             for(Donation dono : e.getDonations()) {
                 double trueAmount = dono.getAmount() * dono.getCount();
                 double convertedAmount = -1D;
@@ -66,11 +66,11 @@ public class TListener implements KoiEventListener {
                     log.warn("exception while converting currencies in donation event: " + dono);
                     FastLogger.logException(t);
                 }
-                donoValue = (convertedAmount < 0)? -1L : Math.round(1000D * convertedAmount);
+                donoValue = (convertedAmount < 0)? -1D : convertedAmount;
             }
             if(donoValue < 0) {
                 log.warn("donation unable to be appraised!");
-                ingestHelper(UpType.PRESENT, PAct.DONATE, e.getSender(), e, -1);
+                ingestHelper(UpType.PRESENT, PAct.DONATE, e.getSender(), e, -1D);
             } else {
                 ingestHelper(UpType.PRESENT, PAct.DONATE, e.getSender(), e, donoValue);
             }
@@ -99,7 +99,7 @@ public class TListener implements KoiEventListener {
         ingestHelper(UpType.PRESENT, PAct.CHANNELPOINTS, e.getSender(), e, e.getReward().getCost());
     }
 
-    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, long value, boolean novalue) {
+    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, Number value, boolean novalue) {
         log.debug("Tasukaru recieved KoiEvent: " + e.getType());
         log.trace(e);
 
@@ -110,11 +110,11 @@ public class TListener implements KoiEventListener {
                 .set("action", act)
                 .set("origin", Source.KOIEVENT)
                 .set("streamState", tl.streamLive(user.getPlatform())? Stream.ONLINE : Stream.OFFLINE);
-        if(!novalue) ei.set("value", value);
+        if(!novalue) ei.set("value", value.doubleValue());
         tl.incoming(ei);
     }
 
-    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, long value) {
+    public void ingestHelper(UpType up, Action act, User user, KoiEvent e, Number value) {
         ingestHelper(up, act, user, e, value, false);
     }
 

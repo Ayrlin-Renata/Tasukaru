@@ -19,8 +19,12 @@ public abstract class InfoObject<T extends InfoObject<T>> {
     public T set(String key, Object value) {
         key = key.toLowerCase();
         if(data.containsKey(key)) {
-            if(data.get(key) instanceof NumInfo) {
-                ((NumInfo) data.get(key)).setValue(Long.valueOf(value.toString())); 
+            if(data.get(key) instanceof LongInfo) {
+                ((LongInfo) data.get(key)).setValue(((Number) value).longValue()); 
+            } else if (data.get(key) instanceof RealInfo) {
+                ((RealInfo) data.get(key)).setValue(((Number) value).doubleValue()); 
+            } else if (data.get(key) instanceof BoolInfo) {
+                ((BoolInfo) data.get(key)).setValue((boolean) value); 
             } else if (data.get(key) instanceof StringInfo) {
                 ((StringInfo) data.get(key)).setValue(value.toString()); 
             } else if (data.get(key) instanceof TimeInfo) {

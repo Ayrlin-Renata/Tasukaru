@@ -18,6 +18,7 @@ import com.ayrlin.tasukaru.data.handler.ViewerHandler;
 
 import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
 import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
+import co.casterlabs.koi.api.KoiChatterType;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -46,7 +47,7 @@ public class TLogic {
 
     public void incoming(EventInfo ei) {
         if(processEvent(ei)) {
-            eh.addToVB(ei.set("processed", "true"));
+            eh.addToVB(ei.set("processed", true));
         } else {
             eh.addToVB(ei);
         }
@@ -169,12 +170,7 @@ public class TLogic {
                     case SUBSCRIBE:
                         break;
                     case DONATE:
-                        long transposedValue = (long) ei.get("value");    
-                        if(transposedValue < 0) {
-                            log.warn("skipping unknown donation point assignment!");
-                            break;
-                        }
-                        double value = transposedValue / 1000D; //TODO value is multiplied by 1000 bc i cant record doubles in VB rn aaa RIP
+                        double value = (long) ei.get("value");
                         double pointsPerUnit = tsets.getNumber("points.dono_per_unit").doubleValue();
                         finalPts = Math.round(streamActPts + (value * pointsPerUnit));
                         break;
@@ -212,7 +208,8 @@ public class TLogic {
     }
 
     public boolean processWatchtime(EventInfo ei) {
-        if(!streamLive(UserPlatform.valueOf(ei.getAccount().get("platform").toString()))) {
+        UserPlatform platform = UserPlatform.valueOf(ei.getAccount().get("platform").toString());
+        if(!streamLive(platform)) {
             log.trace("stream offline, skipping processing for watchtime of " + ei.getViewer().getName());
             return true;
         }
@@ -248,8 +245,8 @@ public class TLogic {
         }
         
         //consider end lurk
+        boolean endLurk = false;
         if(lurking) {
-            boolean endLurk = false;
             long lurkTimeoutMs = minsToMs(tsets.getNumber("watchtime.lurk_timeout").longValue());
             if(!present) {
                 endLurk = true;
@@ -267,7 +264,7 @@ public class TLogic {
                 }
             }
             if(endLurk) {
-                ei.getViewer().set("lurking", String.valueOf(false));
+                ei.getViewer().set("lurking", false);
             }
         }
 
@@ -277,8 +274,17 @@ public class TLogic {
         double pointsPerS = pointsPerHr / 3600F;
         long totalPoints = Math.round((timeCountedMs / 60F) * pointsPerS * lurkMult); 
         vb.viewerHandler.addPoints(ei, totalPoints, Source.WATCHTIME);
-        
+
+        //lurk message
+        if(endLurk) {
+            //TODO settings option for notice, record lurk points
+            sendChat(platform, "Lurking pro " + ei.getAccount().get("displayname") + " came back from lurking with at least " + totalPoints + " points!");
+        }
         return true;
+    }
+
+    private void sendChat(UserPlatform platform, String message) {
+        Caffeinated.getInstance().getKoi().sendChat(platform, message, KoiChatterType.SYSTEM, null, false);
     }
 
     private long timeBetweenEvents(EventInfo e1, EventInfo e2) {

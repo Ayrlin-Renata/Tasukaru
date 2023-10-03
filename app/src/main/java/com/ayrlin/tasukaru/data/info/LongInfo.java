@@ -12,14 +12,14 @@ import lombok.ToString;
 
 @ToString(callSuper = true)
 @JsonClass
-public class NumInfo extends Info<Long> {
-    public static final long NUM_DEFAULT = -1;
+public class LongInfo extends Info<Long> {
+    public static final long LONG_DEFAULT = -1;
 
-    public NumInfo() {
+    public LongInfo() {
         this("");
     }
-    public NumInfo(String name) {
-        super(NUM_DEFAULT, name);
+    public LongInfo(String name) {
+        super(LONG_DEFAULT, name);
         this.type = new TypeToken<Info<Long>>() {};
         this.datatype = new TypeToken<Long>() {};
     }
@@ -36,8 +36,9 @@ public class NumInfo extends Info<Long> {
 
     @Override
     public Param getParam() {
-        return new Param(DataType.INT, name, (long) value);
+        return new Param(DataType.LONG, name, (long) value);
     }
+    
     @Override
     public Long assign(ResultSet rs) throws SQLException {
         setValue(rs.getLong(name));

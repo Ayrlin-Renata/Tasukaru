@@ -43,7 +43,9 @@ public abstract class Info<T> {
         if(o == null) {
             Tasukaru.instance().getLogger().debug("null value attempted to be set on Info: " + this);
             if(Number.class.isAssignableFrom(datatype.getTypeClass())) {
-                o = NumInfo.NUM_DEFAULT;
+                o = RealInfo.REAL_DEFAULT;
+            } else if(Boolean.class.isAssignableFrom(datatype.getTypeClass())) {
+                o = BoolInfo.BOOL_DEFAULT;
             } else if(String.class.isAssignableFrom(datatype.getTypeClass())) {
                 o = StringInfo.STRING_DEFAULT;
             } else if(List.class.isAssignableFrom(datatype.getTypeClass())) {

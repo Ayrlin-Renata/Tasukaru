@@ -27,7 +27,7 @@ import com.ayrlin.tasukaru.data.handler.AccountHandler;
 import com.ayrlin.tasukaru.data.handler.EventHandler;
 import com.ayrlin.tasukaru.data.handler.ViewerHandler;
 import com.ayrlin.tasukaru.data.ViewerInfo;
-import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.LongInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 
 import lombok.Getter;
@@ -161,7 +161,7 @@ public class VBHandler {
         ActiveResult ar = new SelectQuery()
                 .select("latestsnapshot")
                 .from("accounts")
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, aid))
+                .where(SQLUtil.qol(DataType.LONG, "id", Op.EQUAL, aid))
                 .execute(con);
         try {
             if (!ar.rs.next()) {
@@ -188,14 +188,14 @@ public class VBHandler {
         ActiveResult ar = new SelectQuery()
                 .select(SQLUtil.qpl(toFind))
                 .from("snapshots")
-                .where(SQLUtil.qol(DataType.INT,"aid", Op.EQUAL, aid))
+                .where(SQLUtil.qol(DataType.LONG,"aid", Op.EQUAL, aid))
                 .orderBy("id").desc()
                 .execute(con);
         try {
             while(ar.rs.next()) {
-                if(toFind.type == DataType.INT) {
+                if(toFind.type == DataType.LONG) {
                     long result = ar.rs.getLong(toFind.column);
-                    if(result == NumInfo.NUM_DEFAULT) {
+                    if(result == LongInfo.LONG_DEFAULT) {
                         continue;
                     } else {
                         value = result;
@@ -210,7 +210,7 @@ public class VBHandler {
                         if(toFind.column == "roles") { //special case due to serialization, if this becomes regular need to add DataType.SERIALIZED
                             if(result.equals("[]")) continue;
                         } else if(toFind.column == "channelId") { //special case due to for some reason API returning int values
-                            if(result.equals(String.valueOf(NumInfo.NUM_DEFAULT))) continue;
+                            if(result.equals(String.valueOf(LongInfo.LONG_DEFAULT))) continue;
                         }
                         value = result;
                         break;
@@ -242,7 +242,7 @@ public class VBHandler {
                 if(vtcols.contains(cname)) continue;
                 boolean executed = new AlterTableQuery()
                         .alterTable("viewers")
-                        .addColumn(new Col(cname, DataType.INT).references("accounts(id)"))
+                        .addColumn(new Col(cname, DataType.LONG).references("accounts(id)"))
                         .execute(con);
                 if(!executed) { 
                     log.warn("while adding platform column " + cname + ", AlterTableQuery claims to have not altered the table. such claims may be greatly exaggerated."); 
@@ -260,7 +260,7 @@ public class VBHandler {
     public List<EventInfo> retrieveLastViewerInteractions(ViewerInfo viewer, long count) {
         OpParamList params = new OpParamList().setDefaultCnj(Cnj.OR);
         for(long acc : viewer.getAccountIds()) {
-            params.add(new OpParam(DataType.INT, "aid", Op.EQUAL, acc));
+            params.add(new OpParam(DataType.LONG, "aid", Op.EQUAL, acc));
         }
         List<Long> eids = new ArrayList<>();
         ActiveResult ar = new SelectQuery()

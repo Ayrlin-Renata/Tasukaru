@@ -54,11 +54,12 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
         
         List<Param> setParams = new ArrayList<>();
         for(Info<?> i : ai.getData().values()) {
+            //TODO if name updated update viewer fallbackname
             setParams.add(i.getParam());
         }
         
         List<OpParam> whereParams = new ArrayList<>();
-        whereParams.add(new OpParam(DataType.INT, "id", Op.EQUAL, ai.get("id")));
+        whereParams.add(new OpParam(DataType.LONG, "id", Op.EQUAL, ai.get("id")));
         
         if(!SQLUtil.update(con, "accounts", setParams, whereParams)) {
             log.severe("failed to update Account: \n" + ai);
@@ -127,7 +128,7 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
         ActiveResult ar = new SelectQuery()
                 .select("platform")
                 .from("accounts")
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, aid))
+                .where(SQLUtil.qol(DataType.LONG, "id", Op.EQUAL, aid))
                 .execute(con);
         String platString = "";
         try {

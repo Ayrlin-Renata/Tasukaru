@@ -9,13 +9,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Map.Entry;
 
-import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.LongInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 
 import co.casterlabs.koi.api.types.user.UserPlatform;
 
 import com.ayrlin.tasukaru.TLogic;
 import com.ayrlin.tasukaru.Tasukaru;
+import com.ayrlin.tasukaru.data.info.BoolInfo;
 import com.ayrlin.tasukaru.data.info.Info;
 
 @ToString(callSuper = true)
@@ -27,16 +28,17 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
 
     protected Map<String,Info<?>> definition() {
         Map<String,Info<?>> def = new HashMap<>();
-        def.put("id", new NumInfo());
+        def.put("id", new LongInfo());
         def.put("clid", new StringInfo());
         def.put("clname", new StringInfo());
         def.put("fallbackname", new StringInfo());
-        def.put("watchtime", new NumInfo());
-        def.put("points", new NumInfo());
-        def.put("lurking", new StringInfo().setDefault(String.valueOf(false)));
+        def.put("watchtime", new LongInfo());
+        def.put("points", new LongInfo());
+        def.put("lurking", new BoolInfo().setDefault(false));
+        //TODO global name preference + service + command
 
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            def.put(plat.name().toLowerCase(), new NumInfo());
+            def.put(plat.name().toLowerCase(), new LongInfo());
         }
 
         for(Info<?> i : def.values()) {
@@ -59,7 +61,7 @@ public class ViewerInfo extends InfoObject<ViewerInfo> {
     public List<Long> getAccountIds() {
         List<Long> accs = new ArrayList<>();
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            NumInfo ni = ((NumInfo) data.get(plat.name().toLowerCase()));
+            LongInfo ni = ((LongInfo) data.get(plat.name().toLowerCase()));
             if(!ni.atDefault())
                 accs.add(ni.getValue());
         }

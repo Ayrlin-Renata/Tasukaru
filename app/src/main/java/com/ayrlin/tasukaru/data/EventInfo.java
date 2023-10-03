@@ -6,9 +6,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+import com.ayrlin.tasukaru.data.info.BoolInfo;
 import com.ayrlin.tasukaru.data.info.Info;
 import com.ayrlin.tasukaru.data.info.JsonInfo;
-import com.ayrlin.tasukaru.data.info.NumInfo;
+import com.ayrlin.tasukaru.data.info.LongInfo;
 import com.ayrlin.tasukaru.data.info.StringInfo;
 import com.ayrlin.tasukaru.data.info.TimeInfo;
 
@@ -130,16 +131,16 @@ public class EventInfo extends InfoObject<EventInfo> {
 
     protected Map<String,Info<?>> definition() {
         Map<String,Info<?>> def = new HashMap<>();
-        def.put("aid", new NumInfo());
+        def.put("aid", new LongInfo());
         def.put("sid", new StringInfo());
         def.put("uptype", new StringInfo());
         def.put("action", new StringInfo());
-        def.put("value", new NumInfo());
+        def.put("value", new LongInfo());
         def.put("origin", new StringInfo());
         def.put("streamstate", new StringInfo().setDefault("unrecorded"));
         def.put("timestamp", new TimeInfo());
         def.put("event", new JsonInfo());
-        def.put("processed", new StringInfo().setDefault("false"));
+        def.put("processed", new BoolInfo());
 
         for(Info<?> i : def.values()) {
             for(Entry<String, Info<?>> entry : def.entrySet()) {

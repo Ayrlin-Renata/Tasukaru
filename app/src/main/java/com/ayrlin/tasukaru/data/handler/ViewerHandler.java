@@ -93,16 +93,16 @@ public class ViewerHandler extends InfoObjectHandler<ViewerInfo> {
         params.add(new Param(DataType.STRING, "clid", vi.get("clid")));
         params.add(new Param(DataType.STRING, "clname", vi.get("clname")));
         params.add(new Param(DataType.STRING, "fallbackname", vi.get("fallbackname")));
-        params.add(new Param(DataType.INT, "watchtime", vi.get("watchtime")));
-        params.add(new Param(DataType.INT, "points", vi.get("points")));
+        params.add(new Param(DataType.LONG, "watchtime", vi.get("watchtime")));
+        params.add(new Param(DataType.LONG, "points", vi.get("points")));
         for(Long aid : vi.getAccountIds()) {
-            params.add(new Param(DataType.INT, vb.getAccountHandler().getAccountPlatform(aid).name(), aid));
+            params.add(new Param(DataType.LONG, vb.getAccountHandler().getAccountPlatform(aid).name(), aid));
         }
 
         boolean result = new UpdateQuery()
                 .update("viewers")
                 .set(params)
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, vi.get("id")))
+                .where(SQLUtil.qol(DataType.LONG, "id", Op.EQUAL, vi.get("id")))
                 .execute(con);
 
         if(result) {

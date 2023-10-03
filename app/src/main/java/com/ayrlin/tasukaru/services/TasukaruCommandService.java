@@ -131,7 +131,7 @@ public class TasukaruCommandService implements TasukaruInterop {
 
     @Override
     public void setLurk(boolean lurking) {
-        viewer.set("lurking", String.valueOf(false));
+        viewer.set("lurking", false);
         vh.updateToVB(viewer);
     }
 

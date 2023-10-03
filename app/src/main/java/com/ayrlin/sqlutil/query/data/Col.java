@@ -63,12 +63,27 @@ public class Col extends SCol {
     }
 
     public String defString() {
+        String defaultString = "";
+        switch(this.type) {
+            case BOOL:
+                defaultString = ((boolean) this.default_? "1" : "0");
+                break;
+            case DOUBLE:
+            case LONG:
+            case TIMESTAMP:
+                defaultString = this.default_.toString();
+                break;
+            case STRING:
+                defaultString = "\'" + this.default_.toString() + "\'";
+                break;
+        }
+
         return this.column + " " 
                 + this.type.toString()
                 + ((this.primaryKey)? " PRIMARY KEY" + ((this.autoIncrement)? " AUTOINCREMENT" : "") : "")
                 + ((this.notNull)? " NOT NULL" : "")
                 + ((this.unique)? " UNIQUE" : "")
-                + ((this.default_ != null)? " DEFAULT " + this.default_.toString() : "")
+                + ((this.default_ != null)? " DEFAULT " + defaultString : "")
                 + ((!this.references.isEmpty())? " REFERENCES " + this.references : "");
     }
 

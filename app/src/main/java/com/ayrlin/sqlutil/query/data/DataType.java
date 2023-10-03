@@ -5,8 +5,10 @@ import lombok.Getter;
 
 @AllArgsConstructor
 public enum DataType {
+    BOOL("INTEGER"),
+    LONG("INTEGER"),
+    DOUBLE("REAL"),
     STRING("TEXT"),
-    INT("INTEGER"),
     TIMESTAMP("TIMESTAMP");
 
     private @Getter String str;

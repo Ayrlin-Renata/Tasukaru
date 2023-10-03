@@ -80,7 +80,7 @@ public abstract class InfoObjectHandler<T extends InfoObject<T>> {
         ActiveResult ar = new SelectQuery()
                 .select("*")
                 .from(table)
-                .where(SQLUtil.qol(DataType.INT, "id", Op.EQUAL, id))
+                .where(SQLUtil.qol(DataType.LONG, "id", Op.EQUAL, id))
                 .execute(con);
         try {
             if (!ar.rs.next()) {
