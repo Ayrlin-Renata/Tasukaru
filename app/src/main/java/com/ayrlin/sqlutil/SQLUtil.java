@@ -123,35 +123,35 @@ public class SQLUtil {
                     if (p.value instanceof String) {
                         prep.setString(i + 1, p.value.toString()); //+1 because prepared statement indexes are 1-based
                     } else {
-                        throw new IllegalArgumentException("prepDataTypes() passed non-String value.");
+                        throw new IllegalArgumentException("prepDataTypes() passed non-String value: " + p.value);
                     }
                     break;
                 case LONG : 
                     if (p.value instanceof Number) {
                         prep.setLong(i + 1, ((Number) p.value).longValue());
                     } else {
-                        throw new IllegalArgumentException("prepDataTypes() passed non-Long value.");
+                        throw new IllegalArgumentException("prepDataTypes() passed non-Long value: " + p.value);
                     }
                     break;
                 case TIMESTAMP : 
                     if (p.value instanceof Timestamp) {
                         prep.setTimestamp(i + 1, (Timestamp) p.value);    
                     } else {
-                        throw new IllegalArgumentException("prepDataTypes() passed non-Timestamp value.");
+                        throw new IllegalArgumentException("prepDataTypes() passed non-Timestamp value: " + p.value);
                     }
                     break;
                 case BOOL:
                     if (p.value instanceof Boolean) {
                         prep.setBoolean(i + 1, (boolean) p.value);
                     } else {
-                        throw new IllegalArgumentException("prepDataTypes() passed non-Boolean value.");
+                        throw new IllegalArgumentException("prepDataTypes() passed non-Boolean value: " + p.value);
                     }
                     break;
                 case DOUBLE:
                     if (p.value instanceof Number) {
                         prep.setDouble(i + 1, ((Number) p.value).doubleValue());
                     } else {
-                        throw new IllegalArgumentException("prepDataTypes() passed non-Double value.");
+                        throw new IllegalArgumentException("prepDataTypes() passed non-Double value: " + p.value);
                     }
                     break;
             }

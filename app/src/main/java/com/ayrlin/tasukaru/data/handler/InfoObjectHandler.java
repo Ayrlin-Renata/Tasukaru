@@ -96,7 +96,7 @@ public abstract class InfoObjectHandler<T extends InfoObject<T>> {
             return null;
         } finally { ar.close(); }
 
-        if((Long) info.get("id") < 0) {
+        if(info.getData().containsKey("id") && (long) info.get("id") < 0) {
             log.warn("unable to retrieve info from " + table + " table, with id " + info);
             return null;
         }
