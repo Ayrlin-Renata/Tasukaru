@@ -3,6 +3,8 @@
  */
 package com.ayrlin.tasukaru;
 
+import com.ayrlin.tasukaru.caffeine.TListener;
+import com.ayrlin.tasukaru.caffeine.TSettings;
 import com.ayrlin.tasukaru.services.TasukaruCommandService;
 
 import co.casterlabs.caffeinated.pluginsdk.*;

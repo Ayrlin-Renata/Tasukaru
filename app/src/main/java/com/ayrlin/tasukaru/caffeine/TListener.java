@@ -1,7 +1,9 @@
-package com.ayrlin.tasukaru;
+package com.ayrlin.tasukaru.caffeine;
 
 import java.sql.Timestamp;
 
+import com.ayrlin.tasukaru.TLogic;
+import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
 import com.ayrlin.tasukaru.data.EventInfo.*;

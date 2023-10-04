@@ -1,10 +1,11 @@
-package com.ayrlin.tasukaru;
+package com.ayrlin.tasukaru.caffeine;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import com.ayrlin.sqlutil.query.data.DefParam;
+import com.ayrlin.tasukaru.TLogic;
+import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
 
 import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
@@ -37,14 +38,12 @@ public class TSettings {
     }
 
     public boolean begin() {
-        //TODO pre-render settings to avoid unset settings issues
-        // try {
-        //     tskr.setSettings(new JsonObject()); // DEBUG RESET
-        // } catch( Throwable t) {
-        //     tskr.getLogger().warn("SETTINGS ERROR CAUGHT:\n" + t);
-        // }
+        //pre-render settings
+        TConfig.init();
+        //build dropdowns
         Tasukaru.instance().getLogger().trace("building maps");
         this.buildMaps();
+        //render
         Tasukaru.instance().getLogger().trace("rendering settings");
         this.renderSettingsLayout();
         return true;
@@ -76,17 +75,50 @@ public class TSettings {
         // POINTS
         WidgetSettingsSection sectionPoints = new WidgetSettingsSection("points","points");
 
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("watchtime", "points per hour watched", 100, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        // offline multipliers
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("offline_bonus_mult", "offline bonus multiplier", 2, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("offline_chat_mult", "offline chat bonus multiplier", 0.25, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        // lurk multiplier
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("lurk_mult", "lurk multiplier", 1.25, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        //raider_bonus
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("raider_bonus", "host bonus per raider", 100, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        //dono_per_unit
-        sectionPoints.addItem(WidgetSettingsItem.asNumber("dono_per_unit", "donation bonus per USD", 100, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.watchtime.column, 
+                "points per hour watched",
+                (long) TConfig.Points.watchtime.defaultValue, 
+                1, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
 
+        // offline multipliers
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.offline_bonus_mult.column, 
+                "offline bonus multiplier",
+                (double) TConfig.Points.offline_bonus_mult.defaultValue, 
+                0.001, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.offline_chat_mult.column, 
+                "offline chat bonus multiplier",
+                (double) TConfig.Points.offline_chat_mult.defaultValue, 
+                0.001, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
+
+        // lurk multiplier
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.lurk_mult.column, 
+                "lurk multiplier",
+                (double) TConfig.Points.lurk_mult.defaultValue, 
+                0.001, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
+
+        //raider_bonus
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.raider_bonus.column, 
+                "host bonus per raider",
+                (long) TConfig.Points.raider_bonus.defaultValue, 
+                0.001, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
+
+        //dono_per_unit
+        sectionPoints.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Points.dono_per_unit.column, 
+                "donation bonus per USD",
+                (long) TConfig.Points.dono_per_unit.defaultValue, 
+                0.001, 
+                Integer.MIN_VALUE, Integer.MAX_VALUE));
 
         tLayout.addSection(sectionPoints);
         
@@ -116,20 +148,31 @@ public class TSettings {
                     }
                 }
             } else {
-                List<WidgetSettingsItem> wsil = getPlatformBonusItems(s_platforms);
-                for(WidgetSettingsItem wsi : wsil) {
-                    sectionBonuses.addItem(wsi);
+                for(PAct p : PAct.values()) {
+                    DefParam dp = TConfig.Bonuses.bonuses.get(s_platforms + "_" + p.name());
+                    sectionBonuses.addItem(WidgetSettingsItem.asNumber(
+                            dp.column, 
+                            p.toString() + " point bonus", 
+                            (long) dp.defaultValue, 
+                            1, 
+                            Integer.MIN_VALUE, Integer.MAX_VALUE));
                 }
             }
 
         }
         tLayout.addSection(sectionBonuses);
 
-        // ALL BONUSES
+        // CHANNEL POINTS
         WidgetSettingsSection sectionChannelPoints = new WidgetSettingsSection("channelpoints","platform points");
 
         for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
-            sectionChannelPoints.addItem(WidgetSettingsItem.asNumber(plat.name() + "_mult", plat.toString() + " pts conversion multi.", 0, 0.001, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            DefParam dp = TConfig.ChannelPoints.conversions.get(plat.name() + "_mult");
+            sectionChannelPoints.addItem(WidgetSettingsItem.asNumber(
+                    dp.column, 
+                    plat.toString() + " pts conversion multi.", 
+                    (double) dp.defaultValue, 
+                    0.001, 
+                    Integer.MIN_VALUE, Integer.MAX_VALUE));
         }
         tLayout.addSection(sectionChannelPoints);
 
@@ -137,61 +180,66 @@ public class TSettings {
         WidgetSettingsSection sectionWatchtime = new WidgetSettingsSection("watchtime","watchtime");
 
         //add help: Tasukaru calculates overall watchtime by recording all provided viewer interactions to make a 'graph' of viewer stream presence. 'Watchtime around interaction' tells Tasukaru how many minutes before and after a message/follow/etc. to assume the viewer was present. 
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("around_present", "watchtime around interaction (mins.)", 5, 1, 0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.around_present.column, 
+                "watchtime around interaction (mins.)",         
+                (long) TConfig.Watchtime.around_present.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
         //add help: Tasukaru assumes all time inside a viewer's 'interaction chain' is watchtime. After the 'interaction chain timeout', a new message/follow/etc. will not count towards the chain, allowing the intermediary time to be assumed unwatched.
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("chain_timeout", "interaction chain timeout (mins.)", 20, 1, 0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.chain_timeout.column, 
+                "interaction chain timeout (mins.)",         
+                (long) TConfig.Watchtime.chain_timeout.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
         //lurk
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_bonus", "lurk base watchtime (mins.)", 30, 1, 0, Integer.MAX_VALUE));
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_chain", "lurk chain timeout (mins.)", 60, 1, 0, Integer.MAX_VALUE));
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_end", "lurk end density (chat/5min)", 10, 1, 0, Integer.MAX_VALUE));
-        sectionWatchtime.addItem(WidgetSettingsItem.asNumber("lurk_timeout", "lurk timeout (mins.)", 90, 1, 0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.lurk_bonus.column, 
+                "lurk base watchtime (mins.)",         
+                (long) TConfig.Watchtime.lurk_bonus.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.lurk_chain.column, 
+                "lurk chain timeout (mins.)",         
+                (long) TConfig.Watchtime.lurk_chain.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.lurk_end.column, 
+                "lurk end density (chat/5min)",         
+                (long) TConfig.Watchtime.lurk_end.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
+        sectionWatchtime.addItem(WidgetSettingsItem.asNumber(
+                TConfig.Watchtime.lurk_timeout.column, 
+                "lurk timeout (mins.)",         
+                (long) TConfig.Watchtime.lurk_timeout.defaultValue, 
+                1, 
+                0, Integer.MAX_VALUE));
 
         tLayout.addSection(sectionWatchtime);
         
         // BEHAVIOURS
         WidgetSettingsSection sectionBehaviours = new WidgetSettingsSection("behaviours","plugin behaviours");
         
-        sectionBehaviours.addItem(WidgetSettingsItem.asCheckbox("cull_backups", "delete old backups?", true));
+        sectionBehaviours.addItem(WidgetSettingsItem.asCheckbox(
+                TConfig.Behaviours.cull_backups.column, 
+                "delete old backups?", 
+                (boolean) TConfig.Behaviours.cull_backups.defaultValue));
         if(tsets.getBoolean("behaviours.cull_backups", false)) {
-            sectionBehaviours.addItem(WidgetSettingsItem.asNumber("backup_size", "max backup folder size MBs", 1024, 1, 1, Integer.MAX_VALUE));
+            sectionBehaviours.addItem(WidgetSettingsItem.asNumber(
+                    TConfig.Behaviours.backup_size.column, 
+                    "max backup folder size MBs", 
+                    (long) TConfig.Behaviours.backup_size.defaultValue, 
+                    1, 
+                    1, Integer.MAX_VALUE));
         }
         
         tLayout.addSection(sectionBehaviours);
         
         tskr.setSettingsLayout(tLayout);
-    }
-
-    private List<WidgetSettingsItem> getPlatformBonusItems(String s_platforms) {
-        List<WidgetSettingsItem> wsil = new ArrayList<>();
-        for(PAct p : PAct.values()) {
-            double defaultPoints = 0D;
-            switch(p) {
-                case CHANNELPOINTS:
-                    defaultPoints = 5D;
-                    break;
-                case DONATE:
-                    defaultPoints = 100D;
-                    break;
-                case FOLLOW:
-                    defaultPoints = 100D;
-                    break;
-                case JOIN:
-                    break;
-                case LISTED:
-                    break;
-                case MESSAGE:
-                    defaultPoints = 5D;
-                    break;
-                case RAID:
-                    defaultPoints = 500D;
-                    break;
-                case SUBSCRIBE:
-                    defaultPoints = 500D;
-                    break;
-            }
-            wsil.add(WidgetSettingsItem.asNumber(s_platforms + "_" + p.name(), p.toString() + " point bonus", defaultPoints, 1, Integer.MIN_VALUE, Integer.MAX_VALUE));
-        }
-        return wsil;
     }
 
     public void onSettingsUpdate() {

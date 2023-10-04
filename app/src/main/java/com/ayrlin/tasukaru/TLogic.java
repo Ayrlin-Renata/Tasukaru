@@ -4,6 +4,9 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ayrlin.tasukaru.caffeine.TConfig;
+import com.ayrlin.tasukaru.caffeine.TConfig.Bonuses;
+import com.ayrlin.tasukaru.caffeine.TConfig.Points;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
 import com.ayrlin.tasukaru.data.EventInfo.AAct;
@@ -17,7 +20,6 @@ import com.ayrlin.tasukaru.data.handler.EventHandler;
 import com.ayrlin.tasukaru.data.handler.ViewerHandler;
 
 import co.casterlabs.caffeinated.pluginsdk.Caffeinated;
-import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
 import co.casterlabs.koi.api.KoiChatterType;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -25,7 +27,6 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class TLogic {
     private static TLogic instance;
     private FastLogger log;
-    private WidgetSettings tsets;
     private VBHandler vb;
     private List<UserPlatform> supportedPlatforms;
     private EventHandler eh;
@@ -56,7 +57,6 @@ public class TLogic {
     }
 
     public void begin() {
-        this.tsets = Tasukaru.instance().settings();
         this.vb = VBHandler.instance();
         this.eh = vb.getEventHandler();
     }
@@ -147,8 +147,9 @@ public class TLogic {
     }
 
     private boolean processEventActions(EventInfo ei) {
-        double offlineBonusMult = tsets.getNumber("points.offline_bonus_mult").doubleValue(); 
-        double offlineChatMult = tsets.getNumber("points.offline_chat_mult").doubleValue(); 
+        TConfig.update();
+        double offlineBonusMult = (double) Points.offline_bonus_mult.value; 
+        double offlineChatMult = (double) Points.offline_chat_mult.value; 
         double offlineTotalMult = offlineBonusMult;
         UserPlatform platform = UserPlatform.valueOf(ei.getAccount().get("platform").toString());
         boolean offline = !streamLive(platform);
@@ -156,7 +157,7 @@ public class TLogic {
         switch (UpType.valueOf(((String) ei.get("uptype")).toUpperCase())) {
             case PRESENT:
                 PAct presAct = PAct.valueOf(((String) ei.get("action")).toUpperCase());
-                long baseActPts = tsets.getNumber("bonuses." + platform.name() + "_" + presAct.name()).longValue();
+                long baseActPts = (long) Bonuses.bonuses.get(platform.name() + "_" + presAct.name()).value;
                 long streamActPts = Math.round(baseActPts * (offline? offlineTotalMult : 1F));
                 long finalPts = streamActPts;
                 switch (presAct) {
@@ -171,17 +172,17 @@ public class TLogic {
                         break;
                     case DONATE:
                         double value = (long) ei.get("value");
-                        double pointsPerUnit = tsets.getNumber("points.dono_per_unit").doubleValue();
+                        double pointsPerUnit = (double) TConfig.Points.dono_per_unit.value; 
                         finalPts = Math.round(streamActPts + (value * pointsPerUnit));
                         break;
                     case RAID: 
                         long numRaiders = (long) ei.get("value");  
-                        double raiderMult = tsets.getNumber("points.raider_bonus").doubleValue();
+                        double raiderMult = (double) TConfig.Points.raider_bonus.value; 
                         finalPts = Math.round(streamActPts + (numRaiders * raiderMult));
                         break;
                     case CHANNELPOINTS:
                         long cPoints = (long) ei.get("value");  
-                        double cpMult = tsets.getNumber("channelpoints." + platform.name() + "_mult").doubleValue();
+                        double cpMult = (double) TConfig.ChannelPoints.conversions.get(platform.name() + "_mult").value;
                         finalPts = Math.round(streamActPts + (cPoints * cpMult));
                         break;
                     case LISTED:
@@ -219,7 +220,7 @@ public class TLogic {
 
         long neededCount = 2;
         boolean lurking = (boolean) ei.getViewer().get("lurking");
-        long lurkEnd = tsets.getNumber("watchtime.lurk_end").longValue(); //in chat/5mins
+        long lurkEnd = (long) TConfig.Watchtime.lurk_end.value;
         if(lurking) {
             neededCount = lurkEnd;
         }
@@ -229,11 +230,17 @@ public class TLogic {
         long sinceMs = timeBetweenEvents(ei,lastEI);
         
         //consider chain
-        long chainTimeoutMs = minsToMs(tsets.getNumber(lurking? "watchtime.lurk_chain" : "watchtime.chain_timeout").longValue());
+        long chainTimeoutMs;
+        if(lurking) {
+            chainTimeoutMs = minsToMs((long) TConfig.Watchtime.lurk_chain.value);
+        } else {
+            chainTimeoutMs = minsToMs((long) TConfig.Watchtime.chain_timeout.value);
+        }
         boolean chain = (sinceMs < chainTimeoutMs) && present;
+        log.trace("chain: " + chain + " sinceMs: " + sinceMs + " chainTimeoutMs: " + chainTimeoutMs + " present: " + present);
         
         //consider around time
-        long aroundTimeMs = minsToMs(tsets.getNumber("watchtime.around_present").longValue());
+        long aroundTimeMs = minsToMs((long) TConfig.Watchtime.around_present.value);
 
         // CALCULATE
         if(chain) {
@@ -247,7 +254,7 @@ public class TLogic {
         //consider end lurk
         boolean endLurk = false;
         if(lurking) {
-            long lurkTimeoutMs = minsToMs(tsets.getNumber("watchtime.lurk_timeout").longValue());
+            long lurkTimeoutMs = minsToMs((long) TConfig.Watchtime.lurk_timeout.value);
             if(!present) {
                 endLurk = true;
                 log.trace("ending viewer " + ei.getViewer().getName() + " lurk. Viewer is absent from stream.");
@@ -269,11 +276,12 @@ public class TLogic {
         }
 
         //assign points
-        double lurkMult = tsets.getNumber("points.lurk_mult").doubleValue(); 
-        double pointsPerHr = tsets.getNumber("points.watchtime").doubleValue();
+        double lurkMult = (double) TConfig.Points.lurk_mult.value;
+        double pointsPerHr = (long) TConfig.Points.watchtime.value;
         double pointsPerS = pointsPerHr / 3600F;
         long totalPoints = Math.round((timeCountedMs / 60F) * pointsPerS * lurkMult); 
         vb.viewerHandler.addPoints(ei, totalPoints, Source.WATCHTIME);
+        log.trace("points (" + totalPoints + ") = (timeCountedMs (" + timeCountedMs + ") / 60) * pointsPerS (" + pointsPerS + ") * lurkMult (" + lurkMult + ")");
 
         //lurk message
         if(endLurk) {
