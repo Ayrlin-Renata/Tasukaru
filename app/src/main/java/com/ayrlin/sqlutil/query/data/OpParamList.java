@@ -1,9 +1,13 @@
 package com.ayrlin.sqlutil.query.data;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString(callSuper = true)
 public class OpParamList extends ArrayList<OpParam> {
     private static final Cnj DEFAULT_CNJ = Cnj.AND;
 
@@ -22,12 +26,27 @@ public class OpParamList extends ArrayList<OpParam> {
     }
 
     public void addAll(OpParamList other) {
+        int targetSize = this.size() - 1;
+        if(targetSize >= 0) {
+            if (cnjs.size() < targetSize) {
+                int additionalElements = targetSize - cnjs.size();
+                List<Cnj> defaultValues = Collections.nCopies(additionalElements, defaultCnj);
+                cnjs.addAll(defaultValues);
+            }
+            cnjs.subList(targetSize, cnjs.size()).clear();
+        }
+
         this.addAll((ArrayList<OpParam>) other);
         this.cnjs.addAll(other.cnjs);
     }
 
     public OpParamList setDefaultCnj(Cnj c) {
         this.defaultCnj = c;
+        return this;
+    }
+
+    public OpParamList addCnj(Cnj c) {
+        this.cnjs.add(c);
         return this;
     }
 

@@ -5,7 +5,8 @@ package com.ayrlin.tasukaru;
 
 import com.ayrlin.tasukaru.caffeine.TListener;
 import com.ayrlin.tasukaru.caffeine.TSettings;
-import com.ayrlin.tasukaru.services.TasukaruCommandService;
+import com.ayrlin.tasukaru.services.TCommands;
+import com.ayrlin.tasukaru.services.TSecurity;
 
 import co.casterlabs.caffeinated.pluginsdk.*;
 import lombok.Getter;
@@ -59,10 +60,12 @@ public class Tasukaru extends CaffeinatedPlugin {
         addKoiListener(TListener.instance());
 
         //service registration
+        log.trace("registering tasukaru security service!"); //TODO interop service for VB interface
+        registerService("security", new TSecurity());
         // log.trace("registering tasukaru interop service!"); //TODO interop service for VB interface
         // registerService("interop", new TasukaruCommandService());
         log.trace("registering tasukaru command service!");
-        registerService("command", new TasukaruCommandService());
+        registerService("command", new TCommands());
         try {
             FastLogger.logStatic(ReflectionLib.getValue(this, "services"));
         } catch (Throwable t) {

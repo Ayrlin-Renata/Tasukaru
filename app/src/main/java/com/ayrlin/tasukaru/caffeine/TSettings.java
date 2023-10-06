@@ -1,12 +1,23 @@
 package com.ayrlin.tasukaru.caffeine;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.ayrlin.sqlutil.SQLUtil;
+import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.DefParam;
+import com.ayrlin.sqlutil.query.data.OpParam.Op;
 import com.ayrlin.tasukaru.TLogic;
 import com.ayrlin.tasukaru.Tasukaru;
+import com.ayrlin.tasukaru.VBHandler;
+import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
+import com.ayrlin.tasukaru.data.handler.AccountHandler;
 
 import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
 import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsItem;
@@ -14,6 +25,7 @@ import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsLayout
 import co.casterlabs.caffeinated.pluginsdk.widgets.settings.WidgetSettingsSection;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 import co.casterlabs.rakurai.json.element.JsonObject;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class TSettings {
     private static TSettings instance;
@@ -69,6 +81,7 @@ public class TSettings {
         tskr.getLogger().trace("SETTINGS JSON"); //DEBUG
         tskr.getLogger().trace(tskr.settings().getJson()); //DEBUG
         JsonObject jsets = tsets.getJson();
+        List<UserPlatform> platforms = TLogic.instance().getSupportedPlatforms();
 
         WidgetSettingsLayout tLayout = new WidgetSettingsLayout();
 
@@ -138,7 +151,7 @@ public class TSettings {
                     sectionBonuses.addItem(WidgetSettingsItem.asCheckbox("apply_all", "apply to all platforms", false));
                     if(tsets.getBoolean("bonuses.apply_all", false)) {
                         tskr.getLogger().trace("setting settings for all " + s_actions);
-                        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+                        for(UserPlatform plat : platforms) {
                             jsets.put("bonuses." + plat.name() + "_" + s_actions, tsets.getNumber("bonuses.all_" + s_actions));
                         }
                         //notify user
@@ -165,7 +178,7 @@ public class TSettings {
         // CHANNEL POINTS
         WidgetSettingsSection sectionChannelPoints = new WidgetSettingsSection("channelpoints","platform points");
 
-        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+        for(UserPlatform plat : platforms) {
             DefParam dp = TConfig.ChannelPoints.conversions.get(plat.name() + "_mult");
             sectionChannelPoints.addItem(WidgetSettingsItem.asNumber(
                     dp.column, 
@@ -220,9 +233,41 @@ public class TSettings {
                 0, Integer.MAX_VALUE));
 
         tLayout.addSection(sectionWatchtime);
+
+        // MODERATION
+        WidgetSettingsSection sectionModeration = new WidgetSettingsSection("moderation","moderation");
         
+        //TODO Tasukaru can automatically detect which users are mods based on their chat badges.
+        sectionModeration.addItem(WidgetSettingsItem.asCheckbox(
+                TConfig.Moderation.detect_mods.column, 
+                "auto-detect mods", 
+                (boolean) TConfig.Moderation.detect_mods.defaultValue));
+        for(UserPlatform plat : platforms) {
+            DefParam dp = TConfig.Moderation.mods.get(plat.name() + "_mods");
+            sectionModeration.addItem(WidgetSettingsItem.asTextArea(
+                    dp.column, 
+                    plat.toString() + " mod accounts", 
+                    (String) dp.defaultValue, 
+                    "enter account id's or usernames on each line (not display names)",
+                    3));
+                }
+        sectionModeration.addItem(WidgetSettingsItem.asCheckbox(
+                "apply_mods", 
+                "apply mod selection", 
+                false));
+        if(tsets.getBoolean("moderation.apply_mods")) {
+            for(UserPlatform plat : platforms) {
+                applyMods(tsets, plat);
+            }
+            jsets.put("moderation.apply_mods", false);
+            tskr.setSettings(jsets);
+            return;
+        }
+                    
+        tLayout.addSection(sectionModeration);
+
         // BEHAVIOURS
-        WidgetSettingsSection sectionBehaviours = new WidgetSettingsSection("behaviours","plugin behaviours");
+        WidgetSettingsSection sectionBehaviours = new WidgetSettingsSection("behaviours","settings");
         
         sectionBehaviours.addItem(WidgetSettingsItem.asCheckbox(
                 TConfig.Behaviours.cull_backups.column, 
@@ -240,6 +285,47 @@ public class TSettings {
         tLayout.addSection(sectionBehaviours);
         
         tskr.setSettingsLayout(tLayout);
+    }
+
+    private void applyMods(WidgetSettings tsets, UserPlatform plat) {
+        FastLogger log = Tasukaru.instance().getLogger();
+        log.trace("applying mod settings for " + plat.toString());
+        String modString = tsets.getString("moderation." + plat.name() + "_mods");
+
+        AccountHandler ah = VBHandler.instance().getAccountHandler();
+        List<AccountInfo> possibilities;
+        List<String> mods; 
+        List<Long> aids = new ArrayList<>(); 
+
+        if(modString.isEmpty() || modString.isBlank()) {
+            log.debug("no specified mods " + plat);
+        } else {
+            mods = new ArrayList<>(Arrays.asList(modString.split("\r?\n|\r")));
+            if(mods.isEmpty()) {
+                log.debug("no parsed mods " + plat);
+            } else {
+                possibilities = mods.stream()
+                        .flatMap((String mod) -> 
+                            Stream.of(
+                                new AccountInfo()
+                                    .set("userid", mod)
+                                    .set("platform", plat.name()),
+                                new AccountInfo()
+                                    .set("username", mod)
+                                    .set("platform", plat.name())))
+                        .collect(Collectors.toList());
+                if(mods.isEmpty()) {
+                    log.debug("no mod account candidates " + plat);
+                } else {
+                    aids = ah.findAccountIds(possibilities);
+                }
+            }
+        }
+        ah.updateOnAccounts(
+                    aids, 
+                    new DefParam(DataType.BOOL, "mod", true, false), 
+                    SQLUtil.qol(DataType.STRING, "platform", Op.EQUAL, plat.name()));
+        //TODO user feedback
     }
 
     public void onSettingsUpdate() {

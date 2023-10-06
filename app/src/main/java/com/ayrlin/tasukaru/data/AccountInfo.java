@@ -92,7 +92,7 @@ public class AccountInfo extends InfoObject<AccountInfo> {
     public AccountInfo fillDefaults(AccountInfo base) {
         Tasukaru.instance().getLogger().trace("filling defaults using account: \n" + base);
         for(Info<?> i : data.values()) {
-            if (i.atDefault()) {
+            if (i.atDefault() && !i.getDatatype().getTypeClass().isAssignableFrom(Boolean.class)) {
                 Tasukaru.instance().getLogger().trace("info needs filling: " + i);
                 Tasukaru.instance().getLogger().trace("info filling from: " + base.data.get(i.getName()));
                 i.setValue(base.get(i.getName()));

@@ -1,6 +1,7 @@
 package com.ayrlin.tasukaru.caffeine;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.ayrlin.sqlutil.query.data.DataType;
@@ -9,7 +10,6 @@ import com.ayrlin.tasukaru.TLogic;
 import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.data.EventInfo.PAct;
 
-import co.casterlabs.caffeinated.pluginsdk.widgets.WidgetSettings;
 import co.casterlabs.koi.api.types.user.UserPlatform;
 import co.casterlabs.rakurai.json.element.JsonObject;
 
@@ -41,6 +41,11 @@ public class TConfig {
         public static DefParam lurk_timeout = new DefParam(DataType.LONG, "lurk_timeout", null, 90L);
     }
 
+    public static class Moderation {
+        public static DefParam detect_mods = new DefParam(DataType.BOOL, "detect_mods", null, false);
+        public static Map<String, DefParam> mods = new HashMap<>();
+    }
+
     public static class Behaviours {
         public static DefParam cull_backups = new DefParam(DataType.BOOL, "cull_backups", null, true);
         public static DefParam backup_size = new DefParam(DataType.LONG, "backup_size", null, 1024L);
@@ -49,20 +54,20 @@ public class TConfig {
     /**
      * fill any missing settings() values
      */
-    public static void init() { //TODO implement all this into TSettings 
-        WidgetSettings tsets = Tasukaru.instance().settings();
-        jsets = tsets.getJson();
+    public static void init() {
+        jsets = Tasukaru.instance().settings().getJson();
+        List<UserPlatform> platforms = TLogic.instance().getSupportedPlatforms(); 
 
         //points
-        initOrDef(Points.watchtime);
-        initOrDef(Points.offline_bonus_mult);
-        initOrDef(Points.offline_chat_mult);
-        initOrDef(Points.lurk_mult);
-        initOrDef(Points.raider_bonus);
-        initOrDef(Points.dono_per_unit);
+        initOrDef("points", Points.watchtime);
+        initOrDef("points", Points.offline_bonus_mult);
+        initOrDef("points", Points.offline_chat_mult);
+        initOrDef("points", Points.lurk_mult);
+        initOrDef("points", Points.raider_bonus);
+        initOrDef("points", Points.dono_per_unit);
         
         //bonuses
-        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+        for(UserPlatform plat : platforms) {
             for(PAct p : PAct.values()) {
                 String key = plat.name() + "_" + p.name();
                 long defaultPoints = 0;
@@ -92,51 +97,60 @@ public class TConfig {
                 }
                 DefParam dp = new DefParam(DataType.LONG, key, null, defaultPoints);
                 Bonuses.bonuses.put(key, dp);
-                initOrDef(dp);
+                initOrDef("bonuses", dp);
             }
         }
 
         //channelpoints
-        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+        for(UserPlatform plat : platforms) {
             String key = plat.name() + "_mult";
             DefParam dp = new DefParam(DataType.LONG, key, null, 0D);
             ChannelPoints.conversions.put(key, dp);
-            initOrDef(dp);
+            initOrDef("channelpoints", dp);
         }
         
         //watchtime
-        initOrDef(Watchtime.around_present);
-        initOrDef(Watchtime.chain_timeout);
-        initOrDef(Watchtime.lurk_bonus);
-        initOrDef(Watchtime.lurk_chain);
-        initOrDef(Watchtime.lurk_end);
-        initOrDef(Watchtime.lurk_timeout);
+        initOrDef("watchtime", Watchtime.around_present);
+        initOrDef("watchtime", Watchtime.chain_timeout);
+        initOrDef("watchtime", Watchtime.lurk_bonus);
+        initOrDef("watchtime", Watchtime.lurk_chain);
+        initOrDef("watchtime", Watchtime.lurk_end);
+        initOrDef("watchtime", Watchtime.lurk_timeout);
+
+        //moderation
+        initOrDef("moderation", Moderation.detect_mods);
+        for(UserPlatform plat : platforms) {
+            String key = plat.name() + "_mods";
+            DefParam dp = new DefParam(DataType.STRING, key, "", "");
+            Moderation.mods.put(key, dp);
+            initOrDef("moderation", dp);
+        }
         
         //behaviours
-        initOrDef(Behaviours.cull_backups);
-        initOrDef(Behaviours.backup_size);
+        initOrDef("behaviours", Behaviours.cull_backups);
+        initOrDef("behaviours", Behaviours.backup_size);
 
         Tasukaru.instance().setSettings(jsets);
     }
 
-    private static void initOrDef(DefParam param) {
-        if(!jsets.containsKey(param.column)) {
-            putWithType(jsets, param.column, param.type, param.defaultValue);
+    private static void initOrDef(String section, DefParam param) {
+        if(!jsets.containsKey(section + "." + param.column)) {
+            putWithType(section + "." + param.column, param.type, param.defaultValue);
         }
     }
     
-    private static void putWithType(JsonObject jso, String key, DataType type, Object value) {
+    private static void putWithType(String key, DataType type, Object value) {
         switch(type) {
             case BOOL:
-                jso.put(key, (boolean) value);
+                jsets.put(key, (boolean) value);
                 break;
             case DOUBLE:
             case LONG:
-                jso.put(key, (Number) value);
+                jsets.put(key, (Number) value);
                 break;
             case STRING:
             case TIMESTAMP:
-                jso.put(key, (String) value);
+                jsets.put(key, (String) value);
                 break;
         }
     }
@@ -145,42 +159,48 @@ public class TConfig {
      * set values from tskr.settings()
      */
     public static void update() {
-        JsonObject tsetsJson = Tasukaru.instance().settings().getJson().getObject("settings");
+        jsets = Tasukaru.instance().settings().getJson();
+        List<UserPlatform> platforms = TLogic.instance().getSupportedPlatforms(); 
 
         //points
-        Points.watchtime.setValue(tsetsJson.get("watchtime").getAsNumber().longValue());
-        Points.offline_bonus_mult.setValue(tsetsJson.get("offline_bonus_mult").getAsNumber().doubleValue());
-        Points.offline_chat_mult.setValue(tsetsJson.get("offline_chat_mult").getAsNumber().doubleValue());
-        Points.lurk_mult.setValue(tsetsJson.get("lurk_mult").getAsNumber().doubleValue());
-        Points.raider_bonus.setValue(tsetsJson.get("raider_bonus").getAsNumber().longValue());
-        Points.dono_per_unit.setValue(tsetsJson.get("dono_per_unit").getAsNumber().longValue());
+        Points.watchtime.setValue(jsets.get("points.watchtime").getAsNumber().longValue());
+        Points.offline_bonus_mult.setValue(jsets.get("points.offline_bonus_mult").getAsNumber().doubleValue());
+        Points.offline_chat_mult.setValue(jsets.get("points.offline_chat_mult").getAsNumber().doubleValue());
+        Points.lurk_mult.setValue(jsets.get("points.lurk_mult").getAsNumber().doubleValue());
+        Points.raider_bonus.setValue(jsets.get("points.raider_bonus").getAsNumber().longValue());
+        Points.dono_per_unit.setValue(jsets.get("points.dono_per_unit").getAsNumber().longValue());
         
         //bonuses
-        Bonuses.bonuses = new HashMap<>();
-        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+        for(UserPlatform plat : platforms) {
             for(PAct p : PAct.values()) {
                 String key = plat.name() + "_" + p.name();
-                Bonuses.bonuses.get(key).setValue(tsetsJson.get(key).getAsNumber().longValue());
+                Bonuses.bonuses.get(key).setValue(jsets.get("bonuses." + key).getAsNumber().longValue());
             }
         }
         //channelpoints
-        ChannelPoints.conversions = new HashMap<>();
-        for(UserPlatform plat : TLogic.instance().getSupportedPlatforms()) {
+        for(UserPlatform plat : platforms) {
             String key = plat.name() + "_mult";
-            ChannelPoints.conversions.get(key).setValue(tsetsJson.get(key).getAsNumber().doubleValue());
+            ChannelPoints.conversions.get(key).setValue(jsets.get("channelpoints." + key).getAsNumber().doubleValue());
         }
         
         //watchtime
-        Watchtime.around_present.setValue(tsetsJson.get("around_present").getAsNumber().longValue());
-        Watchtime.chain_timeout.setValue(tsetsJson.get("chain_timeout").getAsNumber().longValue());
-        Watchtime.lurk_bonus.setValue(tsetsJson.get("lurk_bonus").getAsNumber().longValue());
-        Watchtime.lurk_chain.setValue(tsetsJson.get("lurk_chain").getAsNumber().longValue());
-        Watchtime.lurk_end.setValue(tsetsJson.get("lurk_end").getAsNumber().longValue());
-        Watchtime.lurk_timeout.setValue(tsetsJson.get("lurk_timeout").getAsNumber().longValue());
+        Watchtime.around_present.setValue(jsets.get("watchtime.around_present").getAsNumber().longValue());
+        Watchtime.chain_timeout.setValue(jsets.get("watchtime.chain_timeout").getAsNumber().longValue());
+        Watchtime.lurk_bonus.setValue(jsets.get("watchtime.lurk_bonus").getAsNumber().longValue());
+        Watchtime.lurk_chain.setValue(jsets.get("watchtime.lurk_chain").getAsNumber().longValue());
+        Watchtime.lurk_end.setValue(jsets.get("watchtime.lurk_end").getAsNumber().longValue());
+        Watchtime.lurk_timeout.setValue(jsets.get("watchtime.lurk_timeout").getAsNumber().longValue());
         
+        //moderation
+        Moderation.detect_mods.setValue(jsets.get("moderation.detect_mods"));
+        for(UserPlatform plat : platforms) {
+            String key = plat.name() + "_mods";
+            Moderation.mods.get(key).setValue(jsets.get("moderation." + key).getAsString());
+        }
+
         //behaviours
-        Behaviours.cull_backups.setValue(tsetsJson.get("cull_backups").getAsBoolean());
-        Behaviours.backup_size.setValue(tsetsJson.get("backup_size").getAsNumber().longValue());
+        Behaviours.cull_backups.setValue(jsets.get("behaviours.cull_backups").getAsBoolean());
+        Behaviours.backup_size.setValue(jsets.get("behaviours.backup_size").getAsNumber().longValue());
 
     }
 }

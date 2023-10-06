@@ -24,7 +24,7 @@ dependencies {
     implementation("com.google.guava:guava:31.0.1-jre")
 
     //Casterlabs Caffeinated PluginSDK
-    compileOnly("co.casterlabs:PluginSDK:1.2-1d5324c2-stable")
+    compileOnly("co.casterlabs:PluginSDK:1.2")
 
     //JDBC SQLite library
     implementation("org.xerial:sqlite-jdbc:3.42.0.0")

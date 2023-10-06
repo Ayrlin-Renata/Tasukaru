@@ -12,6 +12,7 @@ import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.UpdateQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
 import com.ayrlin.sqlutil.query.data.OpParam;
+import com.ayrlin.sqlutil.query.data.OpParamList;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.SCol;
@@ -192,11 +193,11 @@ public class SQLUtil {
      * @param value
      * @return an ArrayList containing one param built as specified
      */
-    public static List<OpParam> qol(DataType type, String col, Op op, Object value) {
+    public static OpParamList qol(DataType type, String col, Op op, Object value) {
         return qol(new OpParam(type, col, op, value));
     }
-    public static List<OpParam> qol(OpParam p) {
-        List<OpParam> qol = new ArrayList<>();
+    public static OpParamList qol(OpParam p) {
+        OpParamList qol = new OpParamList();
         qol.add(p);
         return qol;
     }

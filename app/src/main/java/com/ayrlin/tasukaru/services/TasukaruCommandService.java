@@ -2,161 +2,136 @@ package com.ayrlin.tasukaru.services;
 
 import java.util.List;
 
-import com.ayrlin.tasukaru.Tasukaru;
-import com.ayrlin.tasukaru.VBHandler;
-import com.ayrlin.tasukaru.data.AccountInfo;
-import com.ayrlin.tasukaru.data.EventInfo;
-import com.ayrlin.tasukaru.data.ViewerInfo;
-import com.ayrlin.tasukaru.data.EventInfo.Source;
-import com.ayrlin.tasukaru.data.handler.AccountHandler;
-import com.ayrlin.tasukaru.data.handler.ViewerHandler;
-
 import co.casterlabs.commons.functional.tuples.Triple;
 import co.casterlabs.koi.api.types.user.User;
-import co.casterlabs.rakurai.json.Rson;
-import co.casterlabs.rakurai.json.TypeToken;
-import xyz.e3ndr.fastloggingframework.logging.FastLogger;
+import co.casterlabs.koi.api.types.user.UserPlatform;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import lombok.ToString;
 
-public class TasukaruCommandService implements TasukaruCmdSrv {
+public interface TasukaruCommandService {
 
-    private VBHandler vb;
-    private ViewerHandler vh;
-    private AccountHandler ah;
-    private FastLogger log;
-    private ViewerInfo viewer;
-    private AccountInfo account;
-
-    public TasukaruCommandService() {
-        this.vb = VBHandler.instance();
-        this.vh = vb.getViewerHandler();
-        this.ah = vb.getAccountHandler();
-        this.log = Tasukaru.instance().getLogger();
-        log.debug("tasukaru commmand service instantiated!");
+    /**
+     * Represents a unique user account. A helper to make various forms of valid identification easier to use across all interop functions. 
+     */
+    @ToString
+    @JsonClass(exposeAll = true)
+    public class Identity {
+        public String clID; //Satisfactory given alone. A casterlabs identifier, not yet implemented, DO NOT USE. this is NOT upid
+        public User user; //Satisfactory given alone. A koi User, such as from KoiEvent.getStreamer() or RichMessageEvent.getSender()
+        public String username; //Pair with platform. username or display name of an account.
+        public UserPlatform platform; //Pair with username. an enum representing the streaming platform of the user account.
     }
 
+    /**
+     * Preemptively sets the primary identity to avoid extra computation and make it easier when calling multiple other service methods. 
+     * @param i the identity
+     */
+    public void setIdentity(Identity i);
+
+    /**
+     * Retrieves the current number of points of the user.
+     * @param i an Identity representing the viewer to check points of.
+     * @return the number of points the user has.
+     */
+    public long checkPoints(Identity i);
+    /**
+     * Use setIdentity() first to call this method without args. 
+     * @return a value based on the default identity set by setIdentity().
+     */
+    public long checkPoints();
     
-    @Override
-    public void setIdentity(Identity i) {
-        if(i.clID != null) {
-            //vi = vb.getByClID(i.getClID());
-            log.warn("using unimplemented features (clId) in Identity!" + i);
-        }
-        User user = i.user;
-        if(user != null) {
-            account = ah.getFromVB(ah.findAccountId(new AccountInfo(user)));
-        } else if(i.username != null && i.platform != null) {
-            account = ah.getFromVB(ah.findAccountId(new AccountInfo()
-                .set("username", i.username)
-                .set("platform", i.platform.name())));
-        } else {
-            log.severe("identity is empty! Halting setIdentity() \n" + i);
-            return;
-        }
-        viewer = vh.findViewer(account);
-        if(viewer == null) {
-            log.severe("unable to find viewer based on Identity!" + i);
-        }
-    }
 
-    public void setIdentity(String json) {
-        log.trace("command service recieved identity: \n" + json);
-
-        Identity i;
-        try {
-            i = Rson.DEFAULT.fromJson(json, new TypeToken<Identity>() {});
-        } catch (Exception e) {
-            log.severe("unable to deserialize Identity during command call: " + e.getMessage());
-            e.printStackTrace();
-            return;
-        }
-        setIdentity(i);
-    }
-
-
-    @Override
-    public long checkPoints(Identity i) {
-        setIdentity(i);
-        return checkPoints();
-    }
-
-    @Override
-    public long checkPoints() {
-        return (long) viewer.get("points");
-    }
-
-
-    @Override
-    public long checkWatchtime(Identity i) {
-        setIdentity(i);
-        return checkWatchtime();
-    }
-
-    @Override
-    public long checkWatchtime() {
-        return (long) viewer.get("watchtime");
-    }
-
-
-    @Override
-    public void addPoints(Identity i, long amount) {
-        setIdentity(i);
-        addPoints(amount);
-    }
-
-    @Override
-    public void addPoints(long amount) {
-        EventInfo ei = new EventInfo()
-                .setViewer(viewer)
-                .setAccount(account)
-                .set("sid", vb.findLatestSnapshot((long) account.get("id")));
-        vh.addPoints(ei, amount, Source.COMMAND);
-    }
-
-    @Override
-    public void setPoints(Identity i, long amount) {
-        setIdentity(i);
-        setPoints(amount);
-    }
-
-    @Override
-    public void setPoints(long amount) {
-        addPoints((0 - (long) viewer.get("points")) + amount);
-    }
-
-    @Override
-    public void setLurk(Identity i, boolean lurking) {
-        setIdentity(i);
-        setLurk(lurking);
-    }
-
-    @Override
-    public void setLurk(boolean lurking) {
-        viewer.set("lurking", false);
-        vh.updateToVB(viewer);
-    }
-
-    @Override
-    public List<Triple<Long, String, Long>> getPointsLeaderboard(int count, boolean fromTop) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPointsLeaderboard'");
-    }
-
-    @Override
-    public List<Triple<Long, String, Long>> getWatchtimeLeaderboard(int count, boolean fromTop) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getWatchtimeLeaderboard'");
-    }
-
-    @Override
-    public boolean accountLinkRequest(Identity sender, Identity reciever) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'accountLinkRequest'");
-    }
-
-    @Override
-    public boolean accountUnlinkRequest(Identity sender, String platform) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'accountUnlinkRequest'");
-    }
+    /**
+     * Retrieves the current sum of watchtime of the user across all platforms.
+     * @param i an Identity representing the viewer to check watchtime of.
+     * @return the number of recorded milliseconds of watchtime the user has.
+     */
+    public long checkWatchtime(Identity i); 
+    /**
+     * Use setIdentity() first to call this method without args. 
+     * @return a value based on the default identity set by setIdentity().
+     */
+    public long checkWatchtime();
     
+
+    /**
+     * Adds an amount of points to the current amount of points a user has.
+     * @param i an Identity representing the viewer
+     * @param amount the amount of points to add, use negatives to subtract
+     */
+    public void addPoints(Identity i, long amount);
+    /**
+     * Use setIdentity() first to call this method without identity args. 
+     * @param amount the amount of points to add, use negatives to subtract
+     * @return a value based on the default identity set by setIdentity().
+     */
+    public void addPoints(long amount);
+    
+
+    /**
+     * Sets the amount of points for the user, ignoring previously earned points.
+     * BE CAREFUL! You will have to look through the database to find this if you mess up.
+     * @param i an Identity representing the viewer
+     * @param amount the total amount of points for the user to have. 
+     */
+    public void setPoints(Identity i, long amount);
+    /**
+     * Use setIdentity() first to call this method without identity args. 
+     * @param amount the total amount of points for the user to have. 
+     * @return a value based on the default identity set by setIdentity().
+     */
+    public void setPoints(long amount);
+    
+
+    /**
+     * Sets the lurking state of the user, activating lurk points bonuses/pricing
+     * @param i an Identity representing the viewer
+     * @param lurking true if the user is going AFK
+     */
+    public void setLurk(Identity i, boolean lurking);
+    /**
+     * Use setIdentity() first to call this method without identity args. 
+     * @param lurking true if the user is going AFK
+     * @return a value based on the default identity set by setIdentity().
+     */
+    public void setLurk(boolean lurking);
+
+    /**
+     * Retrieves an ordered list of viewers, according to how many points they have.  
+     * @param count limits how many viewers to retrieve to the value of count
+     * @param fromTop sets the order of the list. if true, the highest point viewer will have the smallest index in the list.
+     * @return the list of triples representing the leaderboard.
+     */
+    public List<Triple<Long, String, Long>> getPointsLeaderboard(int count, boolean fromTop); 
+
+    /**
+     * Retrieves an ordered list of viewers, according to how much watchtime they have.  
+     * @param count limits how many viewers to retrieve to the value of count
+     * @param fromTop sets the order of the list. if true, the highest watchtime viewer will have the smallest index in the list.
+     * @return the list of triples representing the leaderboard.
+     */
+    public List<Triple<Long, String, Long>> getWatchtimeLeaderboard(int count, boolean fromTop); 
+
+    /**
+     * Links a viewer's accounts across platforms to share points regardless of where they watch. 
+     * Link requests must be verified in two directions, so both accounts must request.
+     * Links cannot be made on the same platform.
+     * Deprecated for future implementation, DONOTUSE!
+     * @param sender the viewer making the link request
+     * @param reciever the account being requested to be linked to
+     * @return true if the request was sent successfully
+     */
+    @Deprecated
+    public boolean accountLinkRequest(Identity sender, Identity reciever);
+
+    /**
+     * Unlinks a viewer's account on a specific platform.
+     * Deprecated for future implementation, DONOTUSE!
+     * @param sender the viewer making the link request
+     * @param platform the platform of the account to unlink from the viewer.
+     * @return true if the request was sent successfully
+     */
+    @Deprecated
+    public boolean accountUnlinkRequest(Identity sender, String platform);
+
 }

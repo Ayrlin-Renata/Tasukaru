@@ -15,7 +15,8 @@ public class OpParam extends Param {
         EQUAL("="),
         GREATER(">"),
         LESS("<"),
-        LIKE("LIKE");
+        LIKE("LIKE"),
+        NOTEQUAL("!=");
         
         private @Getter String str;
 

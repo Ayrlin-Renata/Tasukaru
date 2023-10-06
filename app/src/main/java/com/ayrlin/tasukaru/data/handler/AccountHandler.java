@@ -8,9 +8,12 @@ import com.ayrlin.sqlutil.ActiveResult;
 import com.ayrlin.sqlutil.SQLUtil;
 import com.ayrlin.sqlutil.query.SelectQuery;
 import com.ayrlin.sqlutil.query.data.DataType;
+import com.ayrlin.sqlutil.query.data.DefParam;
 import com.ayrlin.sqlutil.query.data.OpParam;
+import com.ayrlin.sqlutil.query.data.OpParamList;
 import com.ayrlin.sqlutil.query.data.Param;
 import com.ayrlin.sqlutil.query.data.OpParam.Op;
+import com.ayrlin.sqlutil.query.data.OpParamList.Cnj;
 import com.ayrlin.tasukaru.Tasukaru;
 import com.ayrlin.tasukaru.data.AccountInfo;
 import com.ayrlin.tasukaru.data.EventInfo;
@@ -158,13 +161,14 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
     public long findAccountId(AccountInfo ai) {
         log.trace("searching for id of Account: \n" + ai);
     
-        List<OpParam> whereList = new ArrayList<>();
+        OpParamList whereList = new OpParamList();
     
         // determine most reliable info
         if (!((String) ai.get("upid")).isEmpty()) {
             whereList.add(new OpParam(DataType.STRING, "upid", Op.EQUAL, ai.get("UPID")));
         } else if (ai.get("platform") != null) {
             whereList.add(new OpParam(DataType.STRING, "platform", Op.EQUAL, ai.get("platform")));
+            whereList.addCnj(Cnj.AND);
             if (!((String) ai.get("userid")).isEmpty()) {
                 whereList.add(new OpParam(DataType.STRING, "userid", Op.EQUAL, ai.get("userId")));
             } else if (!((String) ai.get("username")).isEmpty()) {
@@ -200,4 +204,74 @@ public class AccountHandler extends InfoObjectHandler<AccountInfo> {
         log.debug("found Account id " + accountId + " for Account: \n" + ai);
         return accountId;
     }
+
+    /**
+     * ordered but excludes dupes and errors, so 1:1 match is highly unexpected. 
+     * get actual info afterwards by retrieving accountinfos from ids
+     * @param accounts
+     * @return
+     */
+    public List<Long> findAccountIds(List<AccountInfo> accounts) {
+        log.trace("finding ids for accounts: " + accounts);
+        List<Long> aids = new ArrayList<>();
+        for(AccountInfo acc : accounts) {
+            long aid = findAccountId(acc);
+            if(aid > 0 && !aids.contains(aid)) {
+                aids.add(aid);
+            }
+        }
+        return aids;
+    }
+
+    private List<Long> getIdsWhere(OpParamList match) {
+        List<Long> aids = new ArrayList<>();
+        ActiveResult ar = new SelectQuery()
+                .select("id")
+                .from("accounts")
+                .where(match)
+                .execute(con);
+        try {
+            while(ar.rs.next()) {
+                aids.add(ar.rs.getLong("id"));
+            }
+        } catch (SQLException e) {
+            SQLUtil.SQLExHandle(e, "exception while retrieving account ids where: \n" + match);
+        }
+        log.debug("retrieved ids: " + aids + "\nfor conditions: " + match);
+        return aids;
+    }
+
+    /**
+     * updates value on either some or all accounts 
+     * @param aids
+     * @param param regular Param to update only accounts with id aids, DefParam to update all accounts
+     * @param conditions which accounts to ignore when updating all accounts
+     */
+    public void updateOnAccounts(List<Long> aids, Param param, OpParamList conditions) {
+        log.trace("updating param: " + param + "\nfor accounts " + aids.toString());
+        List<Long> activeAids = new ArrayList<>();
+        activeAids.addAll(aids);
+        
+        Object defaultValue = null;
+        OpParamList match = new OpParamList();
+        if(param instanceof DefParam) {
+            DefParam dp = (DefParam) param;
+            defaultValue = dp.defaultValue;
+            match.add(new OpParam(param.type, param.column, Op.NOTEQUAL, dp.defaultValue));
+            match.addAll(conditions);
+            for (long aid : getIdsWhere(match)) {
+                activeAids.add(aid);
+            }
+        }
+        log.trace("account ids pending changes: " + activeAids);
+
+        for(Long aid : activeAids) {
+            AccountInfo ai = new AccountInfo()
+                    .set("id", aid)
+                    .set(param.column, (aids.contains(aid)? param.value : defaultValue));
+            updateToVB(ai.fillDefaults(getFromVB(aid)));
+        }
+    }
+
+
 }
