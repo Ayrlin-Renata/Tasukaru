@@ -40,7 +40,7 @@ function setIdentity(i, service) {
 }
 
 function isMod() {
-    var mod = Plugins.callServiceMethod(PAC, SECSRV, "isMod", [event.platform.name()]);
+    var mod = Plugins.callServiceMethod(PAC, SECSRV, "isMod", [event.platform]);
     return mod;
 }
 
